@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+:root {
+  --brand-900: #062e22;
+  --brand-800: #0A5540;
+  --brand-700: #0d6b51;
+  --brand-600: #0f8163;
+  --brand-500: #12a07a;
+  --brand-100: #d6f0e8;
+  --brand-50: #edf8f4;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: 'DM Sans', sans-serif;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background-color: #f9fafb;
+  color: #374151;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+}
+
+code, pre, .font-mono {
+  font-family: 'DM Mono', monospace;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 6px;
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes fade-scale-in {
+  from { transform: scale(0.97); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 200ms ease;
+}
+
+.animate-slide-up {
+  animation: slide-up 250ms ease;
+}
+
+.animate-fade-scale-in {
+  animation: fade-scale-in 200ms ease;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+input[type="checkbox"] {
+  accent-color: #0A5540;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)",
+      "Read(//d//**)",
+      "Read(//mnt/**)",
+      "Read(//d/Saas//**)",
+      "Read(//d/KAAYU//**)",
+      "Read(//d/Garage AI//**)"
+    ]
+  }
+}
