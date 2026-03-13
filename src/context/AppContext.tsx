@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import type { Profile, ToastItem } from '../types'
+import { requestNotificationPermission } from '../services/pushNotifications'
 
 interface AppContextType {
   currentUser: Profile | null
@@ -27,6 +28,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.classList.remove('dark')
     localStorage.removeItem('gtrack-theme')
   }, [])
+
+  // Request browser push notification permission once after login
+  useEffect(() => {
+    if (currentUser) {
+      requestNotificationPermission()
+    }
+  }, [currentUser])
 
   const fetchProfile = useCallback(async (userId: string) => {
     const { data } = await supabase

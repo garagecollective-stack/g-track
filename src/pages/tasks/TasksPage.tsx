@@ -14,10 +14,10 @@ type ViewMode = 'table' | 'kanban'
 
 export function TasksPage() {
   const { currentUser } = useApp()
+  // For team leads, RLS policy handles cross-dept visibility (Issue 4)
+  // No frontend dept filter — the DB policy returns tasks where assignee is in their dept
   const filters = currentUser?.role === 'member'
     ? { assigneeId: currentUser.id }
-    : currentUser?.role === 'teamLead'
-    ? { department: currentUser.department || undefined }
     : {}
 
   const { tasks, loading, updateTaskStatus, bulkUpdateStatus, bulkDelete, bulkReassign } = useTasks(filters)
@@ -121,6 +121,7 @@ export function TasksPage() {
               onBulkDelete={bulkDelete}
               onBulkReassign={bulkReassign}
               onBulkDone={ids => bulkUpdateStatus(ids, 'done')}
+              onStatusChange={handleStatusChange}
             />
           </div>
 

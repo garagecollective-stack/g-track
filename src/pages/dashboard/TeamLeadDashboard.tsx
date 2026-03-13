@@ -1,9 +1,10 @@
-import { useState } from 'react'
-import { Folder, CheckSquare, Zap, CheckCheck, Plus, ListTodo } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Folder, CheckSquare, CheckCheck, Plus, ListTodo, AlertTriangle, AlertCircle } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { useProjects } from '../../hooks/useProjects'
 import { useTasks } from '../../hooks/useTasks'
 import { useTeam } from '../../hooks/useTeam'
+import { useIssues } from '../../hooks/useIssues'
 import { Avatar } from '../../shared/Avatar'
 import { ProgressBar } from '../../shared/ProgressBar'
 import { PriorityBadge } from '../../shared/PriorityBadge'
@@ -11,8 +12,27 @@ import { StatusBadge } from '../../shared/StatusBadge'
 import { SkeletonCard } from '../../shared/SkeletonCard'
 import { AssignTaskModal } from '../../modals/AssignTaskModal'
 import { NewProjectModal } from '../../modals/NewProjectModal'
+import { IssueDetailDrawer } from '../../modals/IssueDetailDrawer'
 import { TodoWidget } from '../todos/TodoWidget'
+import { OverdueAlertBanner } from '../../components/OverdueAlertBanner'
 import { useNavigate } from 'react-router-dom'
+import { isOverdue, formatDateShort } from '../../utils/helpers'
+import { supabase } from '../../lib/supabase'
+import type { Issue } from '../../types'
+
+const PRIORITY_DOT: Record<string, string> = {
+  urgent: 'bg-red-500',
+  high: 'bg-orange-500',
+  medium: 'bg-yellow-500',
+  low: 'bg-gray-400',
+}
+
+const STATUS_STYLE: Record<string, string> = {
+  open: 'bg-red-100 text-red-700',
+  in_review: 'bg-blue-100 text-blue-700',
+  resolved: 'bg-green-100 text-green-700',
+  closed: 'bg-gray-100 text-gray-600',
+}
 
 interface StatCardProps {
   icon: React.ElementType
@@ -20,13 +40,17 @@ interface StatCardProps {
   label: string
   iconColor: string
   iconBg: string
+  pulse?: boolean
 }
 
-function StatCard({ icon: Icon, value, label, iconColor, iconBg }: StatCardProps) {
+function StatCard({ icon: Icon, value, label, iconColor, iconBg, pulse }: StatCardProps) {
   return (
     <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
-      <div className={`w-10 h-10 ${iconBg} rounded-xl flex items-center justify-center mb-3`}>
+      <div className={`w-10 h-10 ${iconBg} rounded-xl flex items-center justify-center mb-3 relative`}>
         <Icon size={20} className={iconColor} />
+        {pulse && (
+          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+        )}
       </div>
       <p className="text-3xl font-black text-gray-900" style={{ fontFamily: 'DM Mono, monospace' }}>{value}</p>
       <p className="text-sm font-semibold text-gray-700 mt-0.5">{label}</p>
@@ -38,16 +62,45 @@ export function TeamLeadDashboard() {
   const { currentUser } = useApp()
   const dept = currentUser?.department || ''
   const { projects, loading: projLoading } = useProjects()
-  const { tasks, loading: taskLoading, updateTaskStatus } = useTasks({ department: dept })
   const { members } = useTeam()
+
+  // Fix #5: collect IDs of all members in this department so useTasks can
+  // OR-include cross-department tasks that were assigned to team members
+  const deptMemberIds = useMemo(
+    () => members.filter(m => m.department === dept).map(m => m.id),
+    [members, dept]
+  )
+
+  const { tasks, loading: taskLoading, updateTaskStatus } = useTasks({
+    department: dept,
+    assigneeIds: deptMemberIds,
+  })
+  const { issues } = useIssues()
   const navigate = useNavigate()
   const [showAssignTask, setShowAssignTask] = useState(false)
   const [showNewProject, setShowNewProject] = useState(false)
+  const [openIssue, setOpenIssue] = useState<Issue | null>(null)
+
+  // Trigger overdue check at most once per hour
+  useEffect(() => {
+    const THROTTLE_KEY = 'gtrack_overdue_last_check'
+    const ONE_HOUR = 60 * 60 * 1000
+    const lastRun = localStorage.getItem(THROTTLE_KEY)
+    const now = Date.now()
+    if (!lastRun || now - parseInt(lastRun) > ONE_HOUR) {
+      supabase.functions.invoke('check-overdue').then(() => {
+        localStorage.setItem(THROTTLE_KEY, now.toString())
+      })
+    }
+  }, [])
 
   const deptProjects = projects.filter(p => p.department === dept)
   const deptMembers  = members.filter(m => m.department === dept)
-  const activeTasks  = tasks.filter(t => t.status === 'inProgress').length
   const doneTasks    = tasks.filter(t => t.status === 'done').length
+  const overdueTasks = tasks.filter(t => (t.is_overdue || isOverdue(t.due_date)) && t.status !== 'done').length
+
+  const deptIssues = issues.filter(i => i.department === dept)
+  const recentIssues = deptIssues.filter(i => i.status === 'open' || i.status === 'in_review').slice(0, 3)
 
   return (
     <div className="px-4 py-5 md:px-6 md:py-8 max-w-[1280px] mx-auto">
@@ -71,12 +124,22 @@ export function TeamLeadDashboard() {
         </div>
       </div>
 
+      {/* Overdue Alert Banner */}
+      <OverdueAlertBanner />
+
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5 mb-6">
-        <StatCard icon={Folder}      value={deptProjects.length}                         label="Projects"    iconColor="text-indigo-600" iconBg="bg-indigo-50" />
-        <StatCard icon={CheckSquare} value={tasks.length}                                label="Total Tasks" iconColor="text-blue-600"   iconBg="bg-blue-50"   />
-        <StatCard icon={Zap}         value={activeTasks}                                 label="In Progress" iconColor="text-orange-500" iconBg="bg-orange-50" />
-        <StatCard icon={CheckCheck}  value={doneTasks}                                   label="Completed"   iconColor="text-[#0A5540]"  iconBg="bg-[#edf8f4]" />
+        <StatCard icon={Folder}        value={deptProjects.length} label="Projects"    iconColor="text-indigo-600" iconBg="bg-indigo-50" />
+        <StatCard icon={CheckSquare}   value={tasks.length}        label="Total Tasks" iconColor="text-blue-600"   iconBg="bg-blue-50"   />
+        <StatCard
+          icon={AlertTriangle}
+          value={overdueTasks}
+          label="Overdue"
+          iconColor={overdueTasks > 0 ? 'text-red-600' : 'text-gray-400'}
+          iconBg={overdueTasks > 0 ? 'bg-red-50' : 'bg-gray-50'}
+          pulse={overdueTasks > 0}
+        />
+        <StatCard icon={CheckCheck}    value={doneTasks}           label="Completed"   iconColor="text-[#0A5540]"  iconBg="bg-[#edf8f4]" />
       </div>
 
       {/* Main 2-col layout */}
@@ -97,6 +160,7 @@ export function TeamLeadDashboard() {
                 </div>
               ) : deptProjects.map(project => {
                 const tc = project.task_counts || { todo: 0, active: 0, done: 0 }
+                const overdue = project.is_overdue || (project.due_date && isOverdue(project.due_date))
                 return (
                   <div key={project.id}
                     onClick={() => navigate(`/app/projects/${project.id}`)}
@@ -109,6 +173,11 @@ export function TeamLeadDashboard() {
                         {project.client && <p className="text-xs text-gray-400 mt-0.5">{project.client}</p>}
                       </div>
                       <div className="flex items-center gap-1.5">
+                        {overdue && (
+                          <span className="flex items-center gap-1 text-[10px] font-bold text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded">
+                            <AlertTriangle size={10} /> Overdue
+                          </span>
+                        )}
                         <PriorityBadge priority={project.priority} />
                         <StatusBadge status={project.status} />
                       </div>
@@ -118,7 +187,7 @@ export function TeamLeadDashboard() {
                         <span className="text-gray-400">Progress</span>
                         <span className="font-bold text-gray-700" style={{ fontFamily: 'DM Mono' }}>{project.progress}%</span>
                       </div>
-                      <ProgressBar value={project.progress} />
+                      <ProgressBar value={project.progress} color={overdue ? '#ef4444' : undefined} />
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 text-xs font-medium">
@@ -126,14 +195,10 @@ export function TeamLeadDashboard() {
                         <span className="text-blue-500">{tc.active} active</span>
                         <span className="text-green-500">{tc.done} done</span>
                       </div>
-                      {project.members && (
-                        <div className="flex">
-                          {project.members.slice(0, 3).map((m, i) => (
-                            <div key={m.id} className={`${i > 0 ? '-ml-1.5' : ''} ring-2 ring-white rounded-full`}>
-                              <Avatar name={m.name} size="xs" />
-                            </div>
-                          ))}
-                        </div>
+                      {project.due_date && (
+                        <span className={`text-[11px] ${overdue ? 'text-red-500 font-semibold' : 'text-gray-400'}`}>
+                          {formatDateShort(project.due_date)}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -186,39 +251,89 @@ export function TeamLeadDashboard() {
             <div className="divide-y divide-gray-50">
               {taskLoading ? (
                 <div className="p-3"><SkeletonCard count={3} /></div>
-              ) : tasks.slice(0, 6).map(task => (
-                <div key={task.id} className="flex items-center gap-2 px-4 py-2.5">
-                  <div className={`w-2 h-2 rounded-full shrink-0 ${
-                    task.priority === 'critical' ? 'bg-red-500' :
-                    task.priority === 'high'     ? 'bg-orange-500' :
-                    task.priority === 'medium'   ? 'bg-yellow-400' : 'bg-gray-300'
-                  }`} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-gray-900 truncate">{task.title}</p>
-                    <p className="text-xs text-gray-400">{task.assignee_name || '—'}</p>
+              ) : tasks.slice(0, 6).map(task => {
+                const taskOverdue = task.is_overdue || (isOverdue(task.due_date) && task.status !== 'done')
+                return (
+                  <div key={task.id} className={`flex items-center gap-2 px-4 py-2.5 ${taskOverdue ? 'bg-red-50/40' : ''}`}>
+                    <div className={`w-2 h-2 rounded-full shrink-0 ${
+                      taskOverdue         ? 'bg-red-500' :
+                      task.priority === 'critical' ? 'bg-red-500' :
+                      task.priority === 'high'     ? 'bg-orange-500' :
+                      task.priority === 'medium'   ? 'bg-yellow-400' : 'bg-gray-300'
+                    }`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-gray-900 truncate">{task.title}</p>
+                      <p className={`text-xs ${taskOverdue ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+                        {task.assignee_name || '—'}
+                        {task.due_date && ` · ${formatDateShort(task.due_date)}`}
+                      </p>
+                    </div>
+                    <select
+                      value={task.status}
+                      onChange={e => updateTaskStatus(task.id, e.target.value as any)}
+                      onClick={e => e.stopPropagation()}
+                      className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-[#0A5540] bg-white text-gray-600 cursor-pointer"
+                    >
+                      <option value="backlog">Backlog</option>
+                      <option value="inProgress">In Progress</option>
+                      <option value="done">Done</option>
+                    </select>
                   </div>
-                  <select
-                    value={task.status}
-                    onChange={e => updateTaskStatus(task.id, e.target.value as any)}
-                    onClick={e => e.stopPropagation()}
-                    className="text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-[#0A5540] bg-white text-gray-600 cursor-pointer"
-                  >
-                    <option value="backlog">Backlog</option>
-                    <option value="inProgress">In Progress</option>
-                    <option value="done">Done</option>
-                  </select>
-                </div>
-              ))}
+                )
+              })}
               {!taskLoading && tasks.length === 0 && (
                 <p className="px-4 py-6 text-sm text-gray-400 text-center">No tasks yet</p>
               )}
             </div>
           </div>
+
+          {/* Recent Issues */}
+          {recentIssues.length > 0 && (
+            <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                <div className="flex items-center gap-1.5">
+                  <AlertCircle size={14} className="text-red-500" />
+                  <h3 className="text-sm font-semibold text-gray-900">Recent Issues</h3>
+                </div>
+                <button onClick={() => navigate('/app/issues')}
+                  className="text-xs text-[#0A5540] hover:underline font-medium">All →</button>
+              </div>
+              <div className="divide-y divide-gray-50">
+                {recentIssues.map(issue => (
+                  <button
+                    key={issue.id}
+                    onClick={() => setOpenIssue(issue)}
+                    className="w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-start gap-2">
+                      <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${PRIORITY_DOT[issue.priority] || 'bg-gray-400'}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-900 truncate">{issue.title}</p>
+                        <div className="flex items-center justify-between mt-0.5">
+                          <span className="text-[10px] text-gray-400">{issue.raised_by_name}</span>
+                          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${STATUS_STYLE[issue.status] || 'bg-gray-100 text-gray-600'}`}>
+                            {issue.status === 'in_review' ? 'In Review' : issue.status.charAt(0).toUpperCase() + issue.status.slice(1)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       <AssignTaskModal open={showAssignTask} onClose={() => setShowAssignTask(false)} />
       <NewProjectModal open={showNewProject} onClose={() => setShowNewProject(false)} />
+      {openIssue && (
+        <IssueDetailDrawer
+          issue={openIssue}
+          onClose={() => setOpenIssue(null)}
+          onUpdate={() => {}}
+        />
+      )}
     </div>
   )
 }

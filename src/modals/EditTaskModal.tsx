@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Modal } from '../shared/Modal'
 import { LoadingSpinner } from '../shared/LoadingSpinner'
 import { ConfirmDialog } from '../shared/ConfirmDialog'
+import { Avatar } from '../shared/Avatar'
 import { useTasks } from '../hooks/useTasks'
 import { useProjects } from '../hooks/useProjects'
 import { useTeam } from '../hooks/useTeam'
@@ -24,6 +25,7 @@ export function EditTaskModal({ open, onClose, task }: Props) {
   const toast = useToast()
   const [loading, setLoading] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false)
   const [form, setForm] = useState({
     title: '', description: '', project_id: '',
     priority: 'medium' as Priority, status: 'backlog' as TaskStatus,
@@ -49,8 +51,12 @@ export function EditTaskModal({ open, onClose, task }: Props) {
 
   const canEdit = currentUser?.role !== 'member' || task.assignee_id === currentUser?.id
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    setShowSaveConfirm(true)
+  }
+
+  const handleConfirmedSave = async () => {
     setLoading(true)
     try {
       const assignee = members.find(m => m.id === form.assignee_id)
@@ -133,6 +139,28 @@ export function EditTaskModal({ open, onClose, task }: Props) {
               </select>
             </div>
           )}
+          {currentUser?.role === 'director' && (task.creator || task.created_by_name) && (
+            <div>
+              <label className={labelCls}>Assigned By</label>
+              <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                {task.creator ? (
+                  task.creator.name === task.assignee_name ? (
+                    <em className="text-xs text-gray-400">Self-assigned</em>
+                  ) : (
+                    <>
+                      <Avatar name={task.creator.name} size="xs" imageUrl={task.creator.avatar_url} />
+                      <span className="text-sm text-gray-600">{task.creator.name}</span>
+                    </>
+                  )
+                ) : task.created_by_name ? (
+                  <>
+                    <Avatar name={task.created_by_name} size="xs" />
+                    <span className="text-sm text-gray-600">{task.created_by_name}</span>
+                  </>
+                ) : null}
+              </div>
+            </div>
+          )}
           <div>
             <label className={labelCls}>Due Date</label>
             <input type="date" value={form.due_date} onChange={e => set('due_date', e.target.value)} disabled={!canEdit} className={inputCls} />
@@ -165,11 +193,21 @@ export function EditTaskModal({ open, onClose, task }: Props) {
       </Modal>
 
       <ConfirmDialog
+        open={showSaveConfirm}
+        onClose={() => setShowSaveConfirm(false)}
+        onConfirm={handleConfirmedSave}
+        title="Save Changes"
+        description={`Save changes to "${task.title}"?`}
+        confirmLabel="Save"
+        variant="warning"
+      />
+
+      <ConfirmDialog
         open={showDelete}
         onClose={() => setShowDelete(false)}
         onConfirm={handleDelete}
         title="Delete Task"
-        description={`Are you sure you want to delete "${task.title}"? This cannot be undone.`}
+        description={`Permanently delete "${task.title}"? This cannot be undone.`}
         confirmLabel="Delete"
         variant="danger"
       />

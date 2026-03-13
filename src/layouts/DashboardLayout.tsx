@@ -3,12 +3,13 @@ import { Outlet, NavLink, useNavigate, Navigate } from 'react-router-dom'
 import logoImg from '../assets/logo.png'
 import {
   LayoutDashboard, Users, CheckSquare, BarChart2, Calendar,
-  Settings, Bell, Search, ChevronDown, User, LogOut,
-  Home, MoreHorizontal, ListTodo,
+  Settings, Search, ChevronDown, User, LogOut,
+  Home, MoreHorizontal, ListTodo, AlertCircle,
 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
-import { useNotifications } from '../hooks/useNotifications'
+import { useIssues } from '../hooks/useIssues'
 import { Avatar } from '../shared/Avatar'
+import { ConfirmDialog } from '../shared/ConfirmDialog'
 import { NotificationPanel } from '../components/NotificationPanel'
 import { GlobalSearch } from '../components/GlobalSearch'
 import { Toast } from '../shared/Toast'
@@ -27,15 +28,15 @@ function NavItem({ to, icon: Icon, label, badge }: {
     <NavLink
       to={to}
       className={({ isActive }) =>
-        `flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+        `group flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 ${
           isActive
             ? 'bg-[#0A5540] text-white'
-            : 'text-gray-500 hover:text-white hover:bg-[#0A5540]'
+            : 'text-gray-500 hover:bg-[#0A5540]'
         }`
       }
     >
-      <Icon size={16} />
-      <span>{label}</span>
+      <Icon size={16} className="text-inherit group-hover:text-white" />
+      <span className="group-hover:text-white">{label}</span>
       {badge != null && badge > 0 && (
         <span className="ml-0.5 px-1.5 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded-full leading-none">
           {badge > 9 ? '9+' : badge}
@@ -47,12 +48,15 @@ function NavItem({ to, icon: Icon, label, badge }: {
 
 export function DashboardLayout() {
   const { currentUser, authLoading, signOut } = useApp()
-  const { unreadCount } = useNotifications()
+  const { issues } = useIssues()
   const navigate = useNavigate()
-  const [showNotif, setShowNotif] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
   const [showMoreDrawer, setShowMoreDrawer] = useState(false)
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
+
+  // Count open issues for badge
+  const openIssueCount = issues.filter(i => i.status === 'open').length
 
   // Ctrl+K / Cmd+K global search
   useEffect(() => {
@@ -84,9 +88,15 @@ export function DashboardLayout() {
     ...(!isMember ? [{ to: '/app/team', icon: Users, label: 'Team' }] : []),
     { to: '/app/tasks', icon: CheckSquare, label: 'Tasks' },
     { to: '/app/todos', icon: ListTodo, label: 'To-Do' },
+    ...(!isMember ? [{ to: '/app/issues', icon: AlertCircle, label: 'Issues', badge: openIssueCount }] : []),
     { to: '/app/analytics', icon: BarChart2, label: 'Analytics' },
     { to: '/app/calendar', icon: Calendar, label: 'Calendar' },
   ]
+
+  const handleSignOut = async () => {
+    signOut()
+    navigate('/')
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -115,27 +125,13 @@ export function DashboardLayout() {
             <span className="text-[11px] font-medium bg-gray-200 text-gray-500 rounded px-1 py-0.5">⌘K</span>
           </button>
 
-          {/* Bell */}
-          <div className="relative">
-            <button
-              onClick={() => { setShowNotif(p => !p); setShowUserMenu(false) }}
-              className="relative p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
-              aria-label="Notifications"
-            >
-              <Bell size={18} />
-              {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </button>
-            {showNotif && <NotificationPanel onClose={() => setShowNotif(false)} />}
-          </div>
+          {/* Notification bell + panel (self-contained) */}
+          <NotificationPanel />
 
           {/* User pill */}
           <div className="relative">
             <button
-              onClick={() => { setShowUserMenu(p => !p); setShowNotif(false) }}
+              onClick={() => setShowUserMenu(p => !p)}
               className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-gray-100 transition-colors"
             >
               <Avatar name={currentUser.name} size="sm" status={currentUser.user_status} imageUrl={currentUser.avatar_url} />
@@ -171,7 +167,7 @@ export function DashboardLayout() {
                     </button>
                   )}
                   <div className="border-t border-gray-100 my-1" />
-                  <button onClick={() => { signOut(); navigate('/') }}
+                  <button onClick={() => { setShowUserMenu(false); setShowSignOutConfirm(true) }}
                     className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-500 hover:bg-red-50 rounded-lg transition-colors">
                     <LogOut size={14} /> Sign Out
                   </button>
@@ -191,17 +187,7 @@ export function DashboardLayout() {
           <button onClick={() => setShowSearch(true)} className="p-2 text-gray-500">
             <Search size={18} />
           </button>
-          <div className="relative">
-            <button onClick={() => setShowNotif(p => !p)} className="relative p-2 text-gray-500">
-              <Bell size={18} />
-              {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </button>
-            {showNotif && <NotificationPanel onClose={() => setShowNotif(false)} />}
-          </div>
+          <NotificationPanel />
           <Avatar name={currentUser.name} size="sm" imageUrl={currentUser.avatar_url} />
         </div>
       </header>
@@ -213,27 +199,53 @@ export function DashboardLayout() {
 
       {/* ── Mobile bottom tab bar ── */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 h-16 bg-white border-t border-gray-200 flex items-center justify-around px-1">
-        {[
-          { to: '/app/dashboard', icon: Home,       label: 'Home'     },
-          { to: '/app/tasks',     icon: CheckSquare, label: 'Tasks'    },
-          { to: '/app/todos',     icon: ListTodo,    label: 'To-Do'    },
-          { to: '/app/analytics', icon: BarChart2,   label: 'Analytics'},
-          { to: '/app/calendar',  icon: Calendar,    label: 'Calendar' },
-        ].map(({ to, icon: Icon, label }) => (
-          <NavLink key={to} to={to} className={({ isActive }) =>
-            `flex flex-col items-center gap-0.5 px-2 py-2 rounded-lg transition-colors ${isActive ? 'text-[#0A5540]' : 'text-gray-400'}`
-          }>
-            <Icon size={21} />
-            <span className="text-[10px] font-medium">{label}</span>
-          </NavLink>
-        ))}
-        <button
-          onClick={() => setShowMoreDrawer(true)}
-          className="flex flex-col items-center gap-0.5 px-2 py-2 text-gray-400"
-        >
-          <MoreHorizontal size={21} />
-          <span className="text-[10px] font-medium">More</span>
-        </button>
+        {isMember ? (
+          // Member: Home, Tasks, Analytics, Calendar
+          <>
+            {[
+              { to: '/app/dashboard', icon: Home,       label: 'Home'     },
+              { to: '/app/tasks',     icon: CheckSquare, label: 'Tasks'    },
+              { to: '/app/analytics', icon: BarChart2,   label: 'Analytics'},
+              { to: '/app/calendar',  icon: Calendar,    label: 'Calendar' },
+            ].map(({ to, icon: Icon, label }) => (
+              <NavLink key={to} to={to} className={({ isActive }) =>
+                `flex flex-col items-center gap-0.5 px-2 py-2 rounded-lg transition-colors ${isActive ? 'text-[#0A5540]' : 'text-gray-400'}`
+              }>
+                <Icon size={21} />
+                <span className="text-[10px] font-medium">{label}</span>
+              </NavLink>
+            ))}
+          </>
+        ) : (
+          // Director / TeamLead: Home, Tasks, Issues, Analytics, More
+          <>
+            {[
+              { to: '/app/dashboard', icon: Home,        label: 'Home'     },
+              { to: '/app/tasks',     icon: CheckSquare,  label: 'Tasks'    },
+              { to: '/app/issues',    icon: AlertCircle,  label: 'Issues', badge: openIssueCount },
+              { to: '/app/analytics', icon: BarChart2,    label: 'Analytics'},
+            ].map(({ to, icon: Icon, label, badge }) => (
+              <NavLink key={to} to={to} className={({ isActive }) =>
+                `relative flex flex-col items-center gap-0.5 px-2 py-2 rounded-lg transition-colors ${isActive ? 'text-[#0A5540]' : 'text-gray-400'}`
+              }>
+                <Icon size={21} />
+                {badge != null && badge > 0 && (
+                  <span className="absolute -top-0.5 right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                    {badge > 9 ? '9+' : badge}
+                  </span>
+                )}
+                <span className="text-[10px] font-medium">{label}</span>
+              </NavLink>
+            ))}
+            <button
+              onClick={() => setShowMoreDrawer(true)}
+              className="flex flex-col items-center gap-0.5 px-2 py-2 text-gray-400"
+            >
+              <MoreHorizontal size={21} />
+              <span className="text-[10px] font-medium">More</span>
+            </button>
+          </>
+        )}
       </nav>
 
       {/* ── Mobile "More" drawer ── */}
@@ -247,6 +259,14 @@ export function DashboardLayout() {
                 <Users size={18} /> Team
               </NavLink>
             )}
+            <NavLink to="/app/todos" onClick={() => setShowMoreDrawer(false)}
+              className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${isActive ? 'bg-[#0A5540] text-white' : 'text-gray-700 hover:bg-[#0A5540] hover:text-white'}`}>
+              <ListTodo size={18} /> My To-Do
+            </NavLink>
+            <NavLink to="/app/calendar" onClick={() => setShowMoreDrawer(false)}
+              className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${isActive ? 'bg-[#0A5540] text-white' : 'text-gray-700 hover:bg-[#0A5540] hover:text-white'}`}>
+              <Calendar size={18} /> Calendar
+            </NavLink>
             <NavLink to="/app/profile" onClick={() => setShowMoreDrawer(false)}
               className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${isActive ? 'bg-[#0A5540] text-white' : 'text-gray-700 hover:bg-[#0A5540] hover:text-white'}`}>
               <User size={18} /> My Profile
@@ -262,7 +282,7 @@ export function DashboardLayout() {
               <Search size={18} /> Search
             </button>
             <div className="border-t border-gray-100 my-1 pt-1">
-              <button onClick={() => { signOut(); navigate('/') }}
+              <button onClick={() => { setShowMoreDrawer(false); setShowSignOutConfirm(true) }}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50">
                 <LogOut size={18} /> Sign Out
               </button>
@@ -271,9 +291,9 @@ export function DashboardLayout() {
         </div>
       )}
 
-      {/* Click-outside overlay for dropdowns */}
-      {(showNotif || showUserMenu) && (
-        <div className="fixed inset-0 z-30" onClick={() => { setShowNotif(false); setShowUserMenu(false) }} />
+      {/* Click-outside overlay for user menu only */}
+      {showUserMenu && (
+        <div className="fixed inset-0 z-30" onClick={() => setShowUserMenu(false)} />
       )}
 
       {/* Global Search */}
@@ -281,6 +301,18 @@ export function DashboardLayout() {
 
       {/* Toasts */}
       <Toast />
+
+      {/* Sign Out confirm */}
+      <ConfirmDialog
+        isOpen={showSignOutConfirm}
+        onClose={() => setShowSignOutConfirm(false)}
+        onConfirm={handleSignOut}
+        title="Sign Out?"
+        message="Are you sure you want to sign out of G-Track?"
+        confirmLabel="Sign Out"
+        cancelLabel="Stay"
+        variant="warning"
+      />
     </div>
   )
 }

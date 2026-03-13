@@ -36,6 +36,7 @@ export const supabaseAdmin = createClient(
   serviceKey  || anonKey || 'placeholder-key',
   {
     auth: {
+      storageKey:         'gtrack-admin-data',
       autoRefreshToken:   false,
       persistSession:     false,
       detectSessionInUrl: false,

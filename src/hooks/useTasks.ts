@@ -7,6 +7,9 @@ interface TaskFilters {
   projectId?: string
   department?: string
   assigneeId?: string
+  /** Extra assignee IDs to OR-include — used by team leads to see cross-department tasks
+   *  assigned to their direct reports (Fix #5) */
+  assigneeIds?: string[]
 }
 
 export function useTasks(filters?: TaskFilters) {
@@ -22,22 +25,54 @@ export function useTasks(filters?: TaskFilters) {
     try {
       let query = supabase
         .from('tasks')
-        .select(`*, assignee:profiles!tasks_assignee_id_fkey(id, name, email, role, department, user_status)`)
+        .select(`*, assignee:profiles!tasks_assignee_id_fkey(id, name, email, role, department, user_status), creator:profiles!tasks_created_by_id_fkey(id, name, avatar_url)`)
         .order('created_at', { ascending: false })
 
       if (filters?.projectId) query = query.eq('project_id', filters.projectId)
-      if (filters?.department) query = query.eq('department', filters.department)
+
+      // Fix #5: If both department AND assigneeIds are provided, use OR so that team leads
+      // can see cross-department tasks assigned to their team members
+      if (filters?.department && filters?.assigneeIds && filters.assigneeIds.length > 0) {
+        query = query.or(
+          `department.eq.${filters.department},assignee_id.in.(${filters.assigneeIds.join(',')})`
+        )
+      } else if (filters?.department) {
+        query = query.eq('department', filters.department)
+      }
+
       if (filters?.assigneeId) query = query.eq('assignee_id', filters.assigneeId)
 
       const { data, error: err } = await query
       if (err) throw err
-      setTasks(data || [])
+
+      const fetchedTasks = data || []
+
+      // Client-side overdue detection: mark tasks overdue without waiting for nightly cron
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const overdueIds = fetchedTasks
+        .filter(t => t.due_date && new Date(t.due_date) < today && t.status !== 'done' && !t.is_overdue)
+        .map(t => t.id)
+
+      if (overdueIds.length > 0) {
+        // Fire-and-forget — don't block rendering
+        supabase
+          .from('tasks')
+          .update({ is_overdue: true })
+          .in('id', overdueIds)
+          .then(() => {})
+      }
+
+      setTasks(fetchedTasks)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load tasks')
     } finally {
       setLoading(false)
     }
-  }, [currentUser, filters?.projectId, filters?.department, filters?.assigneeId])
+  // Spread assigneeIds into a stable join string for the dependency array so a new
+  // array reference on every render doesn't cause infinite re-fetches (Fix #5)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser, filters?.projectId, filters?.department, filters?.assigneeId, filters?.assigneeIds?.join(',')])
 
   useEffect(() => {
     fetchTasks()
@@ -58,7 +93,11 @@ export function useTasks(filters?: TaskFilters) {
   const createTask = async (data: Partial<Task>) => {
     const { data: inserted, error: err } = await supabase
       .from('tasks')
-      .insert({ ...data, created_by_id: currentUser?.id })
+      .insert({
+        ...data,
+        created_by_id: currentUser?.id,
+        created_by_name: currentUser?.name || null, // Fix #6: store creator name
+      })
       .select()
       .single()
     if (err) throw err

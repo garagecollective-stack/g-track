@@ -3,7 +3,6 @@ export type UserStatus = 'active' | 'away' | 'offline'
 export type ProjectStatus = 'backlog' | 'inProgress' | 'completed' | 'onHold'
 export type TaskStatus = 'backlog' | 'inProgress' | 'done'
 export type Priority = 'critical' | 'high' | 'medium' | 'low'
-export type NotificationType = 'assignment' | 'completion' | 'update' | 'role_change' | 'department_change' | 'invite'
 export type AuditTargetType = 'user' | 'project' | 'task' | 'department'
 
 export interface Profile {
@@ -49,6 +48,8 @@ export interface Project {
   reference_link: string | null
   client: string | null
   is_archived: boolean
+  is_overdue?: boolean
+  overdue_alerted_at?: string | null
   created_at: string
   owner?: Profile
   members?: Profile[]
@@ -68,8 +69,12 @@ export interface Task {
   assignee_name: string | null
   due_date: string | null
   created_by_id: string | null
+  created_by_name: string | null
   created_at: string
+  is_overdue?: boolean
+  overdue_alerted_at?: string | null
   assignee?: Profile
+  creator?: { id: string; name: string; avatar_url: string | null }
   project?: Project
 }
 
@@ -83,17 +88,6 @@ export interface ProjectFile {
   uploaded_by: string | null
   uploaded_at: string
   uploader?: Profile
-}
-
-export interface Notification {
-  id: string
-  user_id: string
-  message: string
-  type: NotificationType
-  read: boolean
-  related_id: string | null
-  related_type: string | null
-  created_at: string
 }
 
 export interface AuditLog {
@@ -124,4 +118,51 @@ export interface ToastItem {
   type: 'success' | 'error' | 'info' | 'warning'
   title: string
   message?: string
+}
+
+export interface OverdueAlert {
+  id: string
+  entity_type: 'project' | 'task'
+  entity_id: string
+  entity_name: string
+  department: string | null
+  alerted_to: string
+  alerted_role: 'director' | 'teamLead'
+  is_read: boolean
+  is_dismissed: boolean
+  due_date: string
+  days_overdue: number
+  created_at: string
+}
+
+export type IssuePriority = 'low' | 'medium' | 'high' | 'urgent'
+export type IssueStatus = 'open' | 'in_review' | 'resolved' | 'closed'
+
+export interface Issue {
+  id: string
+  entity_type: 'task' | 'project'
+  entity_id: string
+  entity_name: string
+  raised_by: string
+  raised_by_name: string
+  department: string
+  title: string
+  description: string
+  priority: IssuePriority
+  status: IssueStatus
+  resolved_by: string | null
+  resolved_at: string | null
+  resolution_note: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface IssueReply {
+  id: string
+  issue_id: string
+  replied_by: string
+  replied_by_name: string
+  replied_by_role: string
+  message: string
+  created_at: string
 }

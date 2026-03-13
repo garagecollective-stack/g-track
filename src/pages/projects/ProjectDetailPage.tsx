@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, MoreHorizontal, Calendar, User, Building2, ExternalLink } from 'lucide-react'
+import { ArrowLeft, MoreHorizontal, Calendar, User, Building2, ExternalLink, AlertCircle, Plus } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { useProjects } from '../../hooks/useProjects'
 import { useTasks } from '../../hooks/useTasks'
+import { useIssues } from '../../hooks/useIssues'
 import { useToast } from '../../hooks/useToast'
 import { ProgressBar } from '../../shared/ProgressBar'
 import { PriorityBadge } from '../../shared/PriorityBadge'
@@ -15,8 +16,31 @@ import { ProjectFiles } from './ProjectFiles'
 import { ProjectSOP } from './ProjectSOP'
 import { ProjectMembers } from './ProjectMembers'
 import { EditProjectModal } from '../../modals/EditProjectModal'
-import { friendlyError, formatDate } from '../../utils/helpers'
-import type { TaskStatus } from '../../types'
+import { RaiseIssueModal } from '../../modals/RaiseIssueModal'
+import { IssueDetailDrawer } from '../../modals/IssueDetailDrawer'
+import { friendlyError, formatDate, isOverdue, timeAgo } from '../../utils/helpers'
+import type { TaskStatus, Issue } from '../../types'
+
+const STATUS_STYLE: Record<string, string> = {
+  open: 'bg-red-100 text-red-700',
+  in_review: 'bg-blue-100 text-blue-700',
+  resolved: 'bg-green-100 text-green-700',
+  closed: 'bg-gray-100 text-gray-600',
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  open: 'Open',
+  in_review: 'In Review',
+  resolved: 'Resolved',
+  closed: 'Closed',
+}
+
+const PRIORITY_DOT: Record<string, string> = {
+  urgent: 'bg-red-500',
+  high: 'bg-orange-500',
+  medium: 'bg-yellow-500',
+  low: 'bg-gray-400',
+}
 
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -24,15 +48,20 @@ export function ProjectDetailPage() {
   const { currentUser } = useApp()
   const { projects, archiveProject, deleteProject } = useProjects()
   const { tasks, updateTaskStatus } = useTasks({ projectId: id })
+  const { issues, fetchIssues } = useIssues(id)
   const toast = useToast()
   const [tab, setTab] = useState('board')
   const [menuOpen, setMenuOpen] = useState(false)
   const [showEdit, setShowEdit] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
   const [showArchive, setShowArchive] = useState(false)
+  const [showRaiseIssue, setShowRaiseIssue] = useState(false)
+  const [openIssue, setOpenIssue] = useState<Issue | null>(null)
 
   const project = projects.find(p => p.id === id)
-  const canEdit = currentUser?.role !== 'member'
+  const isMember = currentUser?.role === 'member'
+  const canEdit = !isMember
+  const projectOverdue = project && (project.is_overdue || (project.due_date && isOverdue(project.due_date)))
 
   if (!id) return null
   if (!project && projects.length > 0) return (
@@ -68,6 +97,7 @@ export function ProjectDetailPage() {
     { id: 'files', label: 'Files' },
     { id: 'sop', label: 'SOP' },
     { id: 'members', label: 'Members' },
+    { id: 'issues', label: `Issues${issues.length > 0 ? ` (${issues.length})` : ''}` },
   ]
 
   if (!project) {
@@ -93,6 +123,11 @@ export function ProjectDetailPage() {
             <span className="font-mono text-xs bg-gray-100 text-gray-600 rounded px-2 py-0.5">{project.key}</span>
             <PriorityBadge priority={project.priority} />
             <StatusBadge status={project.status} />
+            {projectOverdue && (
+              <span className="flex items-center gap-1 text-xs font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+                <AlertCircle size={11} /> Overdue
+              </span>
+            )}
           </div>
           {canEdit && (
             <div className="relative shrink-0">
@@ -119,7 +154,7 @@ export function ProjectDetailPage() {
 
         <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 mb-4">
           {project.due_date && (
-            <span className="flex items-center gap-1.5">
+            <span className={`flex items-center gap-1.5 ${projectOverdue ? 'text-red-500 font-medium' : ''}`}>
               <Calendar size={14} /> Due {formatDate(project.due_date)}
             </span>
           )}
@@ -144,7 +179,7 @@ export function ProjectDetailPage() {
             <span className="text-xs text-gray-500">Progress</span>
             <span className="text-xs font-semibold text-gray-600" style={{ fontFamily: 'DM Mono' }}>{project.progress}%</span>
           </div>
-          <ProgressBar value={project.progress} size="lg" />
+          <ProgressBar value={project.progress} size="lg" color={projectOverdue ? '#ef4444' : undefined} />
         </div>
 
         <div className="flex gap-4 text-xs mt-2">
@@ -164,8 +199,57 @@ export function ProjectDetailPage() {
       {tab === 'files' && <ProjectFiles projectId={project.id} />}
       {tab === 'sop' && <ProjectSOP projectId={project.id} sop={project.sop} />}
       {tab === 'members' && <ProjectMembers projectId={project.id} department={project.department} />}
+      {tab === 'issues' && (
+        <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <AlertCircle size={16} className="text-amber-500" />
+              <h2 className="text-base font-bold text-gray-900">Issues ({issues.length})</h2>
+            </div>
+            {isMember && (
+              <button
+                onClick={() => setShowRaiseIssue(true)}
+                className="flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-100 transition-colors"
+              >
+                <Plus size={12} /> Raise Issue
+              </button>
+            )}
+          </div>
+          {issues.length === 0 ? (
+            <div className="py-12 text-center text-gray-400">
+              <AlertCircle size={36} className="mx-auto mb-3 opacity-20" />
+              <p className="text-sm">No issues raised for this project</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-50">
+              {issues.map(issue => (
+                <button
+                  key={issue.id}
+                  onClick={() => setOpenIssue(issue)}
+                  className="w-full text-left flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50 transition-colors"
+                >
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${PRIORITY_DOT[issue.priority] || 'bg-gray-400'}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{issue.title}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{issue.raised_by_name}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_STYLE[issue.status] || 'bg-gray-100 text-gray-600'}`}>
+                      {STATUS_LABEL[issue.status] || issue.status}
+                    </span>
+                    <span className="text-xs text-gray-400">{timeAgo(issue.updated_at)}</span>
+                    <AlertCircle size={14} className="text-gray-300" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
-      <EditProjectModal open={showEdit} onClose={() => setShowEdit(false)} project={project} />
+      {canEdit && (
+        <EditProjectModal open={showEdit} onClose={() => setShowEdit(false)} project={project} />
+      )}
 
       <ConfirmDialog
         open={showArchive}
@@ -187,6 +271,21 @@ export function ProjectDetailPage() {
         variant="danger"
         typeToConfirm={project.name}
       />
+
+      <RaiseIssueModal
+        open={showRaiseIssue}
+        onClose={() => setShowRaiseIssue(false)}
+        presetEntity={{ type: 'project', id: project.id, name: project.name }}
+      />
+
+      {openIssue && (
+        <IssueDetailDrawer
+          issue={openIssue}
+          onClose={() => setOpenIssue(null)}
+          onUpdate={fetchIssues}
+          readOnly={isMember}
+        />
+      )}
     </div>
   )
 }

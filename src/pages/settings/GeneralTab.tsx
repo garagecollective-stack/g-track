@@ -6,11 +6,13 @@ import { supabase } from '../../lib/supabase'
 import { friendlyError } from '../../utils/helpers'
 import { TIMEZONES, DATE_FORMATS } from '../../constants'
 import { LoadingSpinner } from '../../shared/LoadingSpinner'
+import { ConfirmDialog } from '../../shared/ConfirmDialog'
 
 export function GeneralTab() {
   const { currentUser } = useApp()
   const toast = useToast()
   const [saving, setSaving] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
   const [companyName, setCompanyName] = useState('Garage Collective')
   const [timezone, setTimezone] = useState('America/New_York')
   const [dateFormat, setDateFormat] = useState('MMM D, YYYY')
@@ -46,111 +48,123 @@ export function GeneralTab() {
   }
 
   return (
-    <div className="max-w-2xl space-y-8">
-      <div>
-        <h3 className="text-sm font-semibold text-gray-900 mb-4">Company</h3>
-        <div className="space-y-4">
-          {/* Company Logo */}
-          <div>
-            <label className="text-sm font-medium text-gray-700 block mb-2">Company Logo</label>
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden bg-gray-50">
-                {logoPreview ? (
-                  <img src={logoPreview} alt="Logo" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-[#0A5540] flex items-center justify-center">
-                    <span className="text-white text-lg font-bold">G</span>
-                  </div>
-                )}
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Upload size={14} /> Upload Logo
-                  <input type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
-                </label>
-                {logoPreview && (
-                  <button
-                    onClick={() => { setLogoFile(null); setLogoPreview(null) }}
-                    className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-600"
-                  >
-                    <X size={14} /> Remove
-                  </button>
-                )}
-                <p className="text-xs text-gray-400">PNG, JPG up to 2MB</p>
+    <>
+      <div className="max-w-2xl space-y-8">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">Company</h3>
+          <div className="space-y-4">
+            {/* Company Logo */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-2">Company Logo</label>
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden bg-gray-50">
+                  {logoPreview ? (
+                    <img src={logoPreview} alt="Logo" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-[#0A5540] flex items-center justify-center">
+                      <span className="text-white text-lg font-bold">G</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                    <Upload size={14} /> Upload Logo
+                    <input type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
+                  </label>
+                  {logoPreview && (
+                    <button
+                      onClick={() => { setLogoFile(null); setLogoPreview(null) }}
+                      className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-600"
+                    >
+                      <X size={14} /> Remove
+                    </button>
+                  )}
+                  <p className="text-xs text-gray-400">PNG, JPG up to 2MB</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Company Name */}
-          <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1.5">Company Name</label>
-            <input
-              type="text"
-              value={companyName}
-              onChange={e => setCompanyName(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:border-[#0A5540] focus:ring-2 focus:ring-[#0A5540]/10"
-            />
+            {/* Company Name */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1.5">Company Name</label>
+              <input
+                type="text"
+                value={companyName}
+                onChange={e => setCompanyName(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:border-[#0A5540] focus:ring-2 focus:ring-[#0A5540]/10"
+              />
+            </div>
           </div>
+        </div>
+
+        <div className="border-t border-gray-100 pt-6">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">Localization</h3>
+          <div className="space-y-4">
+            {/* Timezone */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1.5">Timezone</label>
+              <select
+                value={timezone}
+                onChange={e => setTimezone(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:border-[#0A5540]"
+              >
+                {TIMEZONES.map(tz => (
+                  <option key={tz.value} value={tz.value}>{tz.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Date Format */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1.5">Date Format</label>
+              <select
+                value={dateFormat}
+                onChange={e => setDateFormat(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:border-[#0A5540]"
+              >
+                {DATE_FORMATS.map(fmt => (
+                  <option key={fmt.value} value={fmt.value}>{fmt.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-gray-100 pt-6">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">Account</h3>
+          <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-500">Email</span>
+              <span className="font-medium text-gray-900">{currentUser?.email}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-500">Role</span>
+              <span className="font-medium text-gray-900 capitalize">{currentUser?.role}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end pt-2">
+          <button
+            onClick={() => setShowConfirm(true)}
+            disabled={saving}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0A5540] rounded-lg hover:bg-[#0d6b51] transition-colors disabled:opacity-70 disabled:pointer-events-none"
+          >
+            {saving && <LoadingSpinner size="sm" color="white" />}
+            Save Changes
+          </button>
         </div>
       </div>
 
-      <div className="border-t border-gray-100 pt-6">
-        <h3 className="text-sm font-semibold text-gray-900 mb-4">Localization</h3>
-        <div className="space-y-4">
-          {/* Timezone */}
-          <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1.5">Timezone</label>
-            <select
-              value={timezone}
-              onChange={e => setTimezone(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:border-[#0A5540]"
-            >
-              {TIMEZONES.map(tz => (
-                <option key={tz.value} value={tz.value}>{tz.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Date Format */}
-          <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1.5">Date Format</label>
-            <select
-              value={dateFormat}
-              onChange={e => setDateFormat(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:border-[#0A5540]"
-            >
-              {DATE_FORMATS.map(fmt => (
-                <option key={fmt.value} value={fmt.value}>{fmt.label}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div className="border-t border-gray-100 pt-6">
-        <h3 className="text-sm font-semibold text-gray-900 mb-4">Account</h3>
-        <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">Email</span>
-            <span className="font-medium text-gray-900">{currentUser?.email}</span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">Role</span>
-            <span className="font-medium text-gray-900 capitalize">{currentUser?.role}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex justify-end pt-2">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0A5540] rounded-lg hover:bg-[#0d6b51] transition-colors disabled:opacity-70 disabled:pointer-events-none"
-        >
-          {saving && <LoadingSpinner size="sm" color="white" />}
-          Save Changes
-        </button>
-      </div>
-    </div>
+      <ConfirmDialog
+        open={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        onConfirm={handleSave}
+        title="Save Settings"
+        description="Save these workspace settings?"
+        confirmLabel="Save Settings"
+        variant="confirm"
+      />
+    </>
   )
 }

@@ -22,6 +22,7 @@ import { CalendarPage } from './pages/calendar/CalendarPage'
 import { ProfilePage } from './pages/profile/ProfilePage'
 import { SettingsPage } from './pages/settings/SettingsPage'
 import { TodoPage } from './pages/todos/TodoPage'
+import { IssuesPage } from './pages/issues/IssuesPage'
 import { LoadingSpinner } from './shared/LoadingSpinner'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -46,6 +47,12 @@ function TeamRoute({ children }: { children: React.ReactNode }) {
 function DirectorRoute({ children }: { children: React.ReactNode }) {
   const { currentUser } = useApp()
   if (currentUser?.role !== 'director') return <Navigate to="/app/dashboard" replace />
+  return <>{children}</>
+}
+
+function IssueRoute({ children }: { children: React.ReactNode }) {
+  const { currentUser } = useApp()
+  if (currentUser?.role === 'member') return <Navigate to="/app/dashboard" replace />
   return <>{children}</>
 }
 
@@ -95,6 +102,7 @@ export default function App() {
                 <Route path="profile"     element={<ProfilePage />} />
                 <Route path="todos"       element={<TodoPage />} />
                 <Route path="settings"    element={<DirectorRoute><SettingsPage /></DirectorRoute>} />
+                <Route path="issues"      element={<IssueRoute><IssuesPage /></IssueRoute>} />
               </Route>
 
               <Route path="*"             element={<Navigate to="/" replace />} />

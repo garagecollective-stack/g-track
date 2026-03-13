@@ -11,6 +11,7 @@ import { ProgressBar } from '../../shared/ProgressBar'
 import { StatusBadge } from '../../shared/StatusBadge'
 import { LoadingSpinner } from '../../shared/LoadingSpinner'
 import { Modal } from '../../shared/Modal'
+import { ConfirmDialog } from '../../shared/ConfirmDialog'
 import { isOverdue, friendlyError } from '../../utils/helpers'
 import { useNavigate } from 'react-router-dom'
 import type { UserStatus } from '../../types'
@@ -31,6 +32,8 @@ export function ProfilePage() {
   const [showEdit, setShowEdit] = useState(false)
   const [editName, setEditName] = useState(currentUser?.name || '')
   const [saving, setSaving] = useState(false)
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false)
+  const [pendingStatus, setPendingStatus] = useState<UserStatus | null>(null)
 
   if (!currentUser) return null
 
@@ -42,10 +45,11 @@ export function ProfilePage() {
   const total = myTasks.length
   const completionRate = total > 0 ? Math.round((done / total) * 100) : 0
 
-  const updateStatus = async (status: UserStatus) => {
+  const doUpdateStatus = async () => {
+    if (!pendingStatus) return
     setStatusUpdating(true)
     try {
-      await supabase.from('profiles').update({ user_status: status }).eq('id', currentUser.id)
+      await supabase.from('profiles').update({ user_status: pendingStatus }).eq('id', currentUser.id)
       await refreshUser()
     } catch (err) {
       toast.error(friendlyError(err))
@@ -67,6 +71,8 @@ export function ProfilePage() {
       setSaving(false)
     }
   }
+
+  const pendingStatusLabel = STATUS_OPTS.find(o => o.value === pendingStatus)?.label
 
   return (
     <div className="px-4 py-5 md:px-6 md:py-8 max-w-[1280px] mx-auto">
@@ -108,7 +114,9 @@ export function ProfilePage() {
               {STATUS_OPTS.map(opt => (
                 <button
                   key={opt.value}
-                  onClick={() => updateStatus(opt.value)}
+                  onClick={() => {
+                    if (currentUser.user_status !== opt.value) setPendingStatus(opt.value)
+                  }}
                   disabled={statusUpdating}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left ${
                     currentUser.user_status === opt.value
@@ -196,13 +204,33 @@ export function ProfilePage() {
               className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
               Cancel
             </button>
-            <button onClick={handleSaveProfile} disabled={saving}
+            <button onClick={() => setShowSaveConfirm(true)} disabled={saving}
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0A5540] rounded-lg hover:bg-[#0d6b51] transition-colors disabled:opacity-70">
               {saving && <LoadingSpinner size="sm" color="white" />} Save
             </button>
           </div>
         </div>
       </Modal>
+
+      <ConfirmDialog
+        open={showSaveConfirm}
+        onClose={() => setShowSaveConfirm(false)}
+        onConfirm={handleSaveProfile}
+        title="Save Profile"
+        description={`Update your display name to "${editName}"?`}
+        confirmLabel="Save"
+        variant="confirm"
+      />
+
+      <ConfirmDialog
+        open={!!pendingStatus}
+        onClose={() => setPendingStatus(null)}
+        onConfirm={doUpdateStatus}
+        title="Update Status"
+        description={`Set your status to "${pendingStatusLabel}"?`}
+        confirmLabel="Update"
+        variant="confirm"
+      />
     </div>
   )
 }

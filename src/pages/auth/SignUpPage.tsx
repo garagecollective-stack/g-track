@@ -5,7 +5,7 @@ import logoImg from '../../assets/logo.png'
 import { useAuth } from '../../hooks/useAuth'
 import { friendlyError } from '../../utils/helpers'
 import { LoadingSpinner } from '../../shared/LoadingSpinner'
-import { DEPARTMENTS } from '../../constants'
+import { DepartmentDropdown } from '../../shared/DepartmentDropdown'
 
 function getStrength(pw: string): number {
   let s = 0
@@ -124,13 +124,7 @@ export function SignUpPage() {
 
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1.5">Department</label>
-            <div className="relative">
-              <select value={department} onChange={e => setDepartment(e.target.value)}
-                className="w-full appearance-none border border-gray-200 rounded-lg px-3 py-[9px] pr-8 text-sm text-gray-900 focus:outline-none focus:border-[#0A5540] focus:ring-2 focus:ring-[#0A5540]/10">
-                <option value="">Select department</option>
-                {DEPARTMENTS.map(d => <option key={d.name} value={d.name}>{d.name}</option>)}
-              </select>
-            </div>
+            <DepartmentDropdown value={department} onChange={setDepartment} />
           </div>
 
           {error && (

@@ -14,6 +14,7 @@ interface DayItem {
   name: string
   status: string
   assignee?: string
+  isOverdue?: boolean
 }
 
 export function CalendarPage() {
@@ -44,7 +45,9 @@ export function CalendarPage() {
       if (t.due_date) {
         const key = t.due_date
         if (!map[key]) map[key] = []
-        map[key].push({ type: 'task', name: t.title, status: t.status, assignee: t.assignee_name || undefined })
+        // Fix #7: compute overdue per task item
+        const taskOverdue = (t.is_overdue || isOverdue(t.due_date)) && t.status !== 'done'
+        map[key].push({ type: 'task', name: t.title, status: t.status, assignee: t.assignee_name || undefined, isOverdue: taskOverdue })
       }
     })
     return map
@@ -53,7 +56,9 @@ export function CalendarPage() {
   const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`
   const projectDeadlines = projects.filter(p => p.due_date?.startsWith(monthStr)).length
   const tasksDue = tasks.filter(t => t.due_date?.startsWith(monthStr)).length
-  const overdueCount = tasks.filter(t => isOverdue(t.due_date) && t.status !== 'done').length
+  // Fix #7: collect all overdue tasks (across all months, not just current)
+  const overdueTasks = tasks.filter(t => (t.is_overdue || isOverdue(t.due_date)) && t.status !== 'done')
+  const overdueCount = overdueTasks.length
 
   const selectedKey = selected ? `${selected.getFullYear()}-${String(selected.getMonth()+1).padStart(2,'0')}-${String(selected.getDate()).padStart(2,'0')}` : null
   const selectedItems = selectedKey ? (itemsByDate[selectedKey] || []) : []
@@ -85,10 +90,19 @@ export function CalendarPage() {
           <p className="text-2xl font-bold text-blue-600 mt-1" style={{ fontFamily: 'DM Mono' }}>{tasksDue}</p>
           <p className="text-xs text-gray-400">this month</p>
         </div>
-        <div className={`border border-gray-100 rounded-xl p-4 ${overdueCount > 0 ? 'bg-red-50' : 'bg-white'}`}>
+        <div className={`border rounded-xl p-4 ${overdueCount > 0 ? 'bg-red-50 border-red-200' : 'bg-white border-gray-100'}`}>
           <p className="text-xs text-gray-500">Overdue</p>
           <p className={`text-2xl font-bold mt-1 ${overdueCount > 0 ? 'text-red-500' : 'text-gray-400'}`} style={{ fontFamily: 'DM Mono' }}>{overdueCount}</p>
-          <p className="text-xs text-gray-400">need attention</p>
+          {overdueCount > 0 ? (
+            <ul className="mt-1.5 space-y-0.5">
+              {overdueTasks.slice(0, 3).map(t => (
+                <li key={t.id} className="text-[11px] text-red-600 truncate">⚠ {t.title}</li>
+              ))}
+              {overdueCount > 3 && <li className="text-[11px] text-red-400">+{overdueCount - 3} more</li>}
+            </ul>
+          ) : (
+            <p className="text-xs text-gray-400">need attention</p>
+          )}
         </div>
       </div>
 
@@ -130,17 +144,19 @@ export function CalendarPage() {
               const key = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
               const items = itemsByDate[key] || []
               const isSelected = selected?.getDate() === day && selected?.getMonth() === month && selected?.getFullYear() === year
+              // Fix #7: highlight cell if it has any overdue task
+              const cellHasOverdue = items.some(i => i.isOverdue)
 
               return (
                 <div
                   key={day}
                   onClick={() => setSelected(new Date(year, month, day))}
                   className={`border border-gray-50 min-h-[60px] md:min-h-[90px] p-1.5 cursor-pointer transition-colors hover:bg-gray-50 ${
-                    isPast ? 'bg-gray-50/50' : ''
-                  } ${isSelected ? 'ring-2 ring-inset ring-[#0A5540]' : ''}`}
+                    isPast && !cellHasOverdue ? 'bg-gray-50/50' : ''
+                  } ${cellHasOverdue ? 'bg-red-50/30' : ''} ${isSelected ? 'ring-2 ring-inset ring-[#0A5540]' : ''}`}
                 >
                   <div className={`text-sm font-medium mb-1 w-6 h-6 flex items-center justify-center rounded-full ${
-                    isToday ? 'bg-[#0A5540] text-white' : 'text-gray-600'
+                    isToday ? 'bg-[#0A5540] text-white' : cellHasOverdue ? 'text-red-600 font-bold' : 'text-gray-600'
                   }`}>
                     {day}
                   </div>
@@ -150,9 +166,11 @@ export function CalendarPage() {
                         className={`truncate text-[11px] rounded px-1.5 py-0.5 w-full ${
                           item.type === 'project'
                             ? 'bg-orange-100 text-orange-700'
+                            : item.isOverdue
+                            ? 'bg-red-100 text-red-700 font-semibold'   // Fix #7: red for overdue tasks
                             : 'text-gray-600'
                         }`}>
-                        {item.type === 'task' && '✓ '}{item.name}
+                        {item.type === 'task' && (item.isOverdue ? '⚠ ' : '✓ ')}{item.name}
                       </div>
                     ))}
                     {items.length > 2 && (
