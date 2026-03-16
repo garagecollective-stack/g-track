@@ -45,11 +45,20 @@ function UserFormModal({ onClose, onSave, initial, users, depts, mode }: UserFor
   const [password,   setPassword]   = useState('')
   const [role,       setRole]       = useState<Role>(initial?.role === 'super_admin' ? 'member' : (initial?.role || 'member'))
   const [dept,       setDept]       = useState(initial?.department  || '')
-  const [managerId,  setManagerId]  = useState(initial?.manager_id || '')
-  const [saving,     setSaving]     = useState(false)
-  const [error,      setError]      = useState('')
+  const [managerIds,   setManagerIds]   = useState<string[]>(initial?.manager_ids || [])
+  const [managerTab,   setManagerTab]   = useState<'director' | 'teamLead'>('director')
+  const [saving,       setSaving]       = useState(false)
+  const [error,        setError]        = useState('')
 
-  const managers = users.filter(u => u.role === 'director' || u.role === 'teamLead')
+  const reportCandidates = users.filter(u => u.role === managerTab && u.id !== initial?.id)
+
+  const toggleManager = (id: string) =>
+    setManagerIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+
+  // resolve names for selected ids across both director + teamLead pools
+  const selectedNames = managerIds
+    .map(id => users.find(u => u.id === id)?.name)
+    .filter((n): n is string => !!n)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -58,9 +67,9 @@ function UserFormModal({ onClose, onSave, initial, users, depts, mode }: UserFor
     try {
       if (mode === 'create') {
         if (!password) throw new Error('Password is required')
-        await onSave({ name, email, password, role, department: dept, manager_id: managerId || null } as AdminUserPayload)
+        await onSave({ name, email, password, role, department: dept, manager_ids: managerIds } as AdminUserPayload)
       } else {
-        await onSave({ name, role, department: dept, manager_id: managerId || null })
+        await onSave({ name, role, department: dept, manager_ids: managerIds })
       }
       onClose()
     } catch (err) {
@@ -117,14 +126,63 @@ function UserFormModal({ onClose, onSave, initial, users, depts, mode }: UserFor
               </select>
             </div>
             <div className="col-span-2">
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">Reports To (Manager)</label>
-              <select value={managerId} onChange={e => setManagerId(e.target.value)}
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#0A5540] bg-white">
-                <option value="">— No Manager —</option>
-                {managers.filter(m => m.id !== initial?.id).map(m => (
-                  <option key={m.id} value={m.id}>{m.name} ({ROLE_LABEL[m.role]})</option>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-medium text-gray-700">Reports To</label>
+                {managerIds.length > 0 && (
+                  <span className="text-[11px] text-[#0A5540] font-semibold">{managerIds.length} selected</span>
+                )}
+              </div>
+
+              {/* Selected chips */}
+              {selectedNames.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {managerIds.map(id => {
+                    const u = users.find(x => x.id === id)
+                    if (!u) return null
+                    return (
+                      <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#edf8f4] text-[#0A5540] text-xs font-medium rounded-full">
+                        {u.name}
+                        <button type="button" onClick={() => toggleManager(id)} className="hover:text-red-500 leading-none">&times;</button>
+                      </span>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Tab toggle */}
+              <div className="flex gap-1 p-1 bg-gray-100 rounded-xl mb-2">
+                {(['director', 'teamLead'] as const).map(tab => (
+                  <button key={tab} type="button"
+                    onClick={() => setManagerTab(tab)}
+                    className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                      managerTab === tab
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}>
+                    {tab === 'director' ? 'Directors' : 'Team Leads'}
+                  </button>
                 ))}
-              </select>
+              </div>
+
+              {/* List */}
+              <div className="border border-gray-200 rounded-xl overflow-y-auto max-h-32 divide-y divide-gray-50">
+                {reportCandidates.length === 0 ? (
+                  <p className="px-3 py-2.5 text-sm text-gray-400">
+                    No {managerTab === 'director' ? 'directors' : 'team leads'} available
+                  </p>
+                ) : reportCandidates.map(u => (
+                  <label key={u.id} className="flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={managerIds.includes(u.id)}
+                      onChange={() => toggleManager(u.id)}
+                      className="rounded border-gray-300 text-[#0A5540] focus:ring-[#0A5540]"
+                    />
+                    <span className="text-sm text-gray-700">{u.name}</span>
+                    <span className="ml-auto text-[11px] text-gray-400">{u.department || '—'}</span>
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -148,7 +206,7 @@ function UserFormModal({ onClose, onSave, initial, users, depts, mode }: UserFor
 
 // ── Main Page ──────────────────────────────────────────────────────
 export function AdminUsersPage() {
-  const { users, loading, createUser, updateUser, deleteUser, toggleActive } = useAdminUsers()
+  const { users, loading, fetchError, createUser, updateUser, deleteUser, toggleActive } = useAdminUsers()
   const { depts } = useAdminDepts()
   const [search, setSearch]     = useState('')
   const [roleF, setRoleF]       = useState('')
@@ -231,10 +289,17 @@ export function AdminUsersPage() {
             <tbody>
               {loading ? (
                 <tr><td colSpan={7} className="py-12 text-center text-sm text-gray-400">Loading users…</td></tr>
+              ) : fetchError ? (
+                <tr><td colSpan={7} className="py-12 text-center">
+                  <p className="text-sm font-medium text-red-500">Failed to load users</p>
+                  <p className="text-xs text-gray-400 mt-1 font-mono">{fetchError}</p>
+                </td></tr>
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={7} className="py-12 text-center text-sm text-gray-400">No users found</td></tr>
               ) : filtered.map(user => {
-                const manager = users.find(u => u.id === user.manager_id)
+                const managerNames = (user.manager_ids || [])
+                  .map(mid => users.find(u => u.id === mid)?.name)
+                  .filter((n): n is string => !!n)
                 return (
                   <tr key={user.id}
                     className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${!user.is_active ? 'opacity-60' : ''}`}>
@@ -256,7 +321,7 @@ export function AdminUsersPage() {
                       <span className="text-sm text-gray-600">{user.department || <span className="text-gray-400">—</span>}</span>
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell">
-                      <span className="text-sm text-gray-600">{manager?.name || <span className="text-gray-400">—</span>}</span>
+                      <span className="text-sm text-gray-600">{managerNames.length ? managerNames.join(', ') : <span className="text-gray-400">—</span>}</span>
                     </td>
                     <td className="px-4 py-3">
                       {user.is_active ? (

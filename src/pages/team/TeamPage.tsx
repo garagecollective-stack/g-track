@@ -110,7 +110,7 @@ export function TeamPage() {
         </div>
       )}
 
-      <MemberDetailDrawer member={selected} onClose={() => setSelected(null)} />
+      <MemberDetailDrawer member={selected} onClose={() => setSelected(null)} allMembers={members} />
     </div>
   )
 }

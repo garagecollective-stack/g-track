@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
-import { supabaseAdminAuth, supabaseAdmin } from '../../lib/supabaseAdmin'
+import { supabaseAdminAuth, db } from '../../lib/supabaseAdmin'
 import type { Profile } from '../../types'
 
 interface AdminContextType {
@@ -15,9 +15,9 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const [adminUser,    setAdminUser]    = useState<Profile | null>(null)
   const [adminLoading, setAdminLoading] = useState(true)
 
-  // Fetch profile via service-role client (bypasses RLS — always readable)
+  // Fetch profile — uses service-role client if available, otherwise uses session client
   const fetchAdminProfile = useCallback(async (userId: string): Promise<Profile | null> => {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await db
       .from('profiles')
       .select('*')
       .eq('id', userId)

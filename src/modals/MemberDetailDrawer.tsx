@@ -14,9 +14,10 @@ import type { Profile, Project } from '../types'
 interface Props {
   member: Profile | null
   onClose: () => void
+  allMembers?: Profile[]
 }
 
-export function MemberDetailDrawer({ member, onClose }: Props) {
+export function MemberDetailDrawer({ member, onClose, allMembers = [] }: Props) {
   const { currentUser } = useApp()
   const { tasks, bulkReassign } = useTasks({ assigneeId: member?.id })
   const [projects, setProjects] = useState<Project[]>([])
@@ -72,6 +73,25 @@ export function MemberDetailDrawer({ member, onClose }: Props) {
               <p className="text-sm text-gray-500 mt-1">{member.email}</p>
             </div>
           </div>
+
+          {/* Reporting To */}
+          {member.role !== 'director' && (member.manager_ids?.length ?? 0) > 0 && (
+            <div className="mb-4">
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Reporting To</p>
+              <div className="flex flex-wrap gap-2">
+                {(member.manager_ids || []).map(mid => {
+                  const mgr = allMembers.find(m => m.id === mid)
+                  if (!mgr) return null
+                  return (
+                    <div key={mid} className="flex items-center gap-2 bg-[#edf8f4] rounded-lg px-2.5 py-1.5">
+                      <Avatar name={mgr.name} size="xs" imageUrl={mgr.avatar_url} />
+                      <span className="text-xs font-medium text-[#0A5540]">{mgr.name}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Stats */}
           <div className="grid grid-cols-4 gap-2 mb-5">

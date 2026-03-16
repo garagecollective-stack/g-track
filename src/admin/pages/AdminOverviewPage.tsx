@@ -1,7 +1,7 @@
 import { Users, Building2, CheckSquare, ShieldCheck, TrendingUp, UserCheck, UserX, Activity } from 'lucide-react'
 import { useAdminUsers } from '../hooks/useAdminUsers'
 import { useAdminDepts } from '../hooks/useAdminDepts'
-import { supabaseAdmin } from '../../lib/supabaseAdmin'
+import { db } from '../../lib/supabaseAdmin'
 import { useState, useEffect } from 'react'
 import { timeAgo } from '../../utils/helpers'
 
@@ -34,9 +34,9 @@ export function AdminOverviewPage() {
   const [recentActivity, setRecentActivity] = useState<any[]>([])
 
   useEffect(() => {
-    supabaseAdmin.from('tasks').select('id', { count: 'exact', head: true })
+    db.from('tasks').select('id', { count: 'exact', head: true })
       .then(({ count }) => setTaskCount(count || 0))
-    supabaseAdmin.from('audit_logs')
+    db.from('audit_logs')
       .select('*, performer:profiles(name)')
       .order('created_at', { ascending: false })
       .limit(8)

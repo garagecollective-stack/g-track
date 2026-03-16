@@ -168,7 +168,7 @@ export function UsersTab() {
 
         <InviteUserModal open={showInvite} onClose={() => setShowInvite(false)} onSuccess={fetchMembers} />
         <EditUserModal open={!!editUser} onClose={() => setEditUser(null)} user={editUser} />
-        <DeleteUserModal open={!!deleteUser} onClose={() => setDeleteUser(null)} user={deleteUser} />
+        <DeleteUserModal open={!!deleteUser} onClose={() => setDeleteUser(null)} user={deleteUser} onSuccess={fetchMembers} />
       </div>
 
       <ConfirmDialog

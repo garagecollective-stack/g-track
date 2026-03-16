@@ -93,7 +93,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const addToast = useCallback((toast: Omit<ToastItem, 'id'>) => {
-    const id = crypto.randomUUID()
+    const id = Math.random().toString(36).substring(2) + Date.now().toString(36)
     setToasts(prev => [...prev, { ...toast, id }])
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id))

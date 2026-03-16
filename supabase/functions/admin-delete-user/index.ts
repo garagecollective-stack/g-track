@@ -36,8 +36,8 @@ Deno.serve(async (req: Request) => {
       .eq('id', caller.id)
       .single()
 
-    if (callerProfile?.role !== 'super_admin') {
-      return json({ error: 'Access denied: super_admin role required' }, 403)
+    if (callerProfile?.role !== 'super_admin' && callerProfile?.role !== 'director') {
+      return json({ error: 'Access denied: director role required' }, 403)
     }
 
     // ── 3. Validate payload ─────────────────────────────────────────

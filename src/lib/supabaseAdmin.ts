@@ -45,3 +45,11 @@ export const supabaseAdmin = createClient(
 )
 
 export const hasServiceRole = !!serviceKey
+
+/**
+ * Use this for all admin DATA queries (SELECT / INSERT / UPDATE / DELETE on tables).
+ * - If VITE_SUPABASE_SERVICE_ROLE_KEY is set → uses supabaseAdmin (bypasses RLS entirely)
+ * - Otherwise → uses supabaseAdminAuth (carries the logged-in admin's session, subject to RLS)
+ * Never use supabaseAdmin directly for table queries — it has no session without the service key.
+ */
+export const db = hasServiceRole ? supabaseAdmin : supabaseAdminAuth

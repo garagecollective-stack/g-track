@@ -18,6 +18,7 @@ export interface Profile {
   tasks_completed: number
   last_seen: string | null
   manager_id: string | null
+  manager_ids?: string[]
   invited_by: string | null
   created_at: string
 }

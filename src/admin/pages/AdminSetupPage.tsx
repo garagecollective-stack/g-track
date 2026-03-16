@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Shield, CheckCircle2, AlertCircle, ArrowRight, Loader2 } from 'lucide-react'
 import logoImg from '../../assets/logo.png'
-import { supabaseAdmin } from '../../lib/supabaseAdmin'
-import { hasServiceRole } from '../../lib/supabaseAdmin'
+import { supabaseAdmin, db, hasServiceRole } from '../../lib/supabaseAdmin'
 
 type Step = 'checking' | 'needed' | 'already_exists' | 'creating' | 'done' | 'error'
 
@@ -19,7 +18,7 @@ export function AdminSetupPage() {
   useEffect(() => {
     async function check() {
       addLog('Checking for existing super_admin profile…')
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await db
         .from('profiles')
         .select('id, email, role')
         .eq('role', 'super_admin')
@@ -83,7 +82,7 @@ export function AdminSetupPage() {
 
       // Step 2 — upsert profile with super_admin role
       addLog('Setting profile role to super_admin…')
-      const { error: profileErr } = await supabaseAdmin
+      const { error: profileErr } = await db
         .from('profiles')
         .upsert({
           id:        userId,

@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
+import { X, Check } from 'lucide-react'
 import { Modal } from '../shared/Modal'
 import { LoadingSpinner } from '../shared/LoadingSpinner'
 import { ConfirmDialog } from '../shared/ConfirmDialog'
 import { RoleDropdown } from '../shared/RoleDropdown'
 import { DepartmentDropdown } from '../shared/DepartmentDropdown'
+import { Avatar } from '../shared/Avatar'
 import { useTeam } from '../hooks/useTeam'
 import { useToast } from '../hooks/useToast'
 import { friendlyError } from '../utils/helpers'
@@ -12,23 +14,42 @@ import type { Profile, Role } from '../types'
 interface Props { open: boolean; onClose: () => void; user: Profile | null }
 
 export function EditUserModal({ open, onClose, user }: Props) {
-  const { updateUserRole, updateUserDept } = useTeam()
+  const { members, updateUserRole, updateUserDept, updateUserManagers } = useTeam()
   const toast = useToast()
   const [role, setRole] = useState<Role>('member')
   const [department, setDepartment] = useState('')
+  const [managerIds, setManagerIds] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSaveConfirm, setShowSaveConfirm] = useState(false)
 
   useEffect(() => {
-    if (user) { setRole(user.role); setDepartment(user.department || '') }
+    if (user) {
+      setRole(user.role)
+      setDepartment(user.department || '')
+      setManagerIds(user.manager_ids || [])
+    }
   }, [user])
 
   if (!user) return null
 
+  const directors = members.filter(m => m.role === 'director' && m.id !== user.id)
+  const showManagerField = role !== 'director'
+
   const roleChanged = role !== user.role
   const deptChanged = department !== (user.department || '')
+  const managersChanged = showManagerField && (
+    JSON.stringify([...(user.manager_ids || [])].sort()) !== JSON.stringify([...managerIds].sort())
+  )
+  const hasChanges = roleChanged || deptChanged || managersChanged
+
+  const toggleManager = (id: string) => {
+    setManagerIds(prev =>
+      prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]
+    )
+  }
 
   const handleSave = () => {
+    if (!hasChanges) { onClose(); return }
     setShowSaveConfirm(true)
   }
 
@@ -37,6 +58,7 @@ export function EditUserModal({ open, onClose, user }: Props) {
     try {
       if (roleChanged) await updateUserRole(user.id, role, user.name)
       if (deptChanged) await updateUserDept(user.id, department, user.name)
+      if (managersChanged) await updateUserManagers(user.id, managerIds, user.name)
       toast.success(`${user.name}'s profile updated`)
       setShowSaveConfirm(false)
       onClose()
@@ -48,49 +70,105 @@ export function EditUserModal({ open, onClose, user }: Props) {
     }
   }
 
-  // Build dynamic confirm props
-  let confirmTitle = 'Save User Changes?'
-  let confirmMessage = `Save changes for ${user.name}?`
-  let confirmLabel = 'Save All Changes'
-
-  if (roleChanged && deptChanged) {
-    confirmTitle = 'Save User Changes?'
-    confirmMessage = `Update ${user.name}: role will change to ${role} and department to ${department || 'none'}. Their access and permissions will update immediately.`
-    confirmLabel = 'Save All Changes'
-  } else if (roleChanged) {
-    confirmTitle = 'Change User Role?'
-    confirmMessage = `Change ${user.name}'s role from ${user.role} to ${role}? Their dashboard access and permissions will update immediately after they next refresh.`
-    confirmLabel = 'Yes, Change Role'
-  } else if (deptChanged) {
-    confirmTitle = 'Change Department?'
-    confirmMessage = `Move ${user.name} from ${user.department || 'no department'} to ${department || 'none'}? Their project and task access will change immediately. They may be removed from projects outside ${department || 'their new department'}.`
-    confirmLabel = 'Yes, Move Department'
+  // Build dynamic confirm message
+  const changes: string[] = []
+  if (roleChanged) changes.push(`role → ${role}`)
+  if (deptChanged) changes.push(`department → ${department || 'none'}`)
+  if (managersChanged) {
+    const names = managerIds.map(id => directors.find(d => d.id === id)?.name).filter(Boolean)
+    changes.push(`reporting to → ${names.length ? names.join(', ') : 'none'}`)
   }
+  const confirmMessage = `Update ${user.name}: ${changes.join('; ')}. Changes take effect immediately.`
 
   return (
     <>
       <Modal open={open} onClose={onClose} title={`Edit User — ${user.name}`} size="sm">
         <div className="space-y-4">
           <div>
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1.5">Role</label>
+            <label className="text-sm font-medium text-gray-700 block mb-1.5">Role</label>
             <RoleDropdown
               value={role} onChange={setRole}
               showConfirm={true} currentUserName={user.name} originalValue={user.role}
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-1.5">Department</label>
+            <label className="text-sm font-medium text-gray-700 block mb-1.5">Department</label>
             <DepartmentDropdown
               value={department} onChange={setDepartment}
               showConfirm={true} currentUserName={user.name} originalValue={user.department || ''}
             />
           </div>
+
+          {/* Reporting To — multi-select directors */}
+          {showManagerField && (
+            <div>
+              <label className="text-sm font-medium text-gray-700 block mb-1.5">
+                Reporting To
+                <span className="ml-1.5 text-xs font-normal text-gray-400">(select all that apply)</span>
+              </label>
+              {directors.length === 0 ? (
+                <p className="text-sm text-gray-400 py-2">No directors found</p>
+              ) : (
+                <div className="border border-gray-200 rounded-lg overflow-hidden divide-y divide-gray-100">
+                  {directors.map(d => {
+                    const selected = managerIds.includes(d.id)
+                    return (
+                      <button
+                        key={d.id}
+                        type="button"
+                        onClick={() => toggleManager(d.id)}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
+                          selected ? 'bg-[#edf8f4]' : 'bg-white hover:bg-gray-50'
+                        }`}
+                      >
+                        <Avatar name={d.name} size="sm" imageUrl={d.avatar_url} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{d.name}</p>
+                          {d.department && (
+                            <p className="text-xs text-gray-400 truncate">{d.department}</p>
+                          )}
+                        </div>
+                        <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors ${
+                          selected
+                            ? 'bg-[#0A5540] border-[#0A5540]'
+                            : 'border-gray-300 bg-white'
+                        }`}>
+                          {selected && <Check size={12} className="text-white" strokeWidth={3} />}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Selected chips */}
+              {managerIds.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {managerIds.map(id => {
+                    const d = directors.find(m => m.id === id)
+                    if (!d) return null
+                    return (
+                      <span key={id}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#0A5540]/10 text-[#0A5540] text-xs font-medium rounded-full">
+                        {d.name}
+                        <button type="button" onClick={() => toggleManager(id)}
+                          className="hover:text-[#0A5540]/60 transition-colors">
+                          <X size={10} />
+                        </button>
+                      </span>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex justify-end gap-3 pt-2">
             <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
               Cancel
             </button>
-            <button onClick={handleSave} disabled={isSubmitting}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0A5540] rounded-lg hover:bg-[#0d6b51] transition-colors disabled:opacity-70">
+            <button onClick={handleSave} disabled={isSubmitting || !hasChanges}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0A5540] rounded-lg hover:bg-[#0d6b51] transition-colors disabled:opacity-50">
               {isSubmitting && <LoadingSpinner size="sm" color="white" />} Save Changes
             </button>
           </div>
@@ -101,9 +179,9 @@ export function EditUserModal({ open, onClose, user }: Props) {
         isOpen={showSaveConfirm}
         onClose={() => setShowSaveConfirm(false)}
         onConfirm={handleConfirmedSave}
-        title={confirmTitle}
+        title="Save User Changes?"
         message={confirmMessage}
-        confirmLabel={confirmLabel}
+        confirmLabel="Save Changes"
         variant="warning"
         isLoading={isSubmitting}
       />

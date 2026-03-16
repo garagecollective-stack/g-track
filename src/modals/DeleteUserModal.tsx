@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Modal } from '../shared/Modal'
 import { LoadingSpinner } from '../shared/LoadingSpinner'
 import { useTeam } from '../hooks/useTeam'
@@ -7,14 +7,16 @@ import { useToast } from '../hooks/useToast'
 import { friendlyError } from '../utils/helpers'
 import type { Profile } from '../types'
 
-interface Props { open: boolean; onClose: () => void; user: Profile | null }
+interface Props { open: boolean; onClose: () => void; user: Profile | null; onSuccess?: () => void }
 
-export function DeleteUserModal({ open, onClose, user }: Props) {
+export function DeleteUserModal({ open, onClose, user, onSuccess }: Props) {
   const { currentUser } = useApp()
   const { members, deleteUser } = useTeam()
   const toast = useToast()
   const [typed, setTyped] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => { if (open) setTyped('') }, [open])
 
   if (!user) return null
 
@@ -30,6 +32,7 @@ export function DeleteUserModal({ open, onClose, user }: Props) {
       toast.success('User deleted')
       setTyped('')
       onClose()
+      onSuccess?.()
     } catch (err) {
       toast.error(friendlyError(err))
     } finally {

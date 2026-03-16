@@ -6,12 +6,6 @@ import { useAuth } from '../../hooks/useAuth'
 import { friendlyError } from '../../utils/helpers'
 import { LoadingSpinner } from '../../shared/LoadingSpinner'
 
-const DEMO_ACCOUNTS = [
-  { label: 'Director', email: 'rajan@garagecollective.io',  password: 'Password123!' },
-  { label: 'Team Lead', email: 'priya@garagecollective.io', password: 'Password123!' },
-  { label: 'Member',    email: 'rohit@garagecollective.io', password: 'Password123!' },
-]
-
 export function SignInPage() {
   const navigate = useNavigate()
   const { signIn } = useAuth()
@@ -33,12 +27,6 @@ export function SignInPage() {
     } finally {
       setLoading(false)
     }
-  }
-
-  function fillDemo(acc: typeof DEMO_ACCOUNTS[number]) {
-    setEmail(acc.email)
-    setPassword(acc.password)
-    setError('')
   }
 
   return (
@@ -110,20 +98,6 @@ export function SignInPage() {
             {loading ? <LoadingSpinner size="sm" color="white" /> : <><ArrowRight size={15} /> Sign in</>}
           </button>
         </form>
-
-        {/* Demo accounts */}
-        <div className="mt-6 p-3.5 bg-gray-50 border border-gray-100 rounded-xl">
-          <p className="text-gray-500 text-[11px] font-semibold uppercase tracking-wider mb-2">Demo Accounts</p>
-          <div className="space-y-1">
-            {DEMO_ACCOUNTS.map(acc => (
-              <button key={acc.email} onClick={() => fillDemo(acc)}
-                className="block w-full text-left text-xs text-gray-500 hover:text-gray-900 transition-colors py-1 px-1 rounded hover:bg-gray-100">
-                <span className="text-[#0A5540] font-semibold">{acc.label}:</span>{' '}
-                {acc.email}
-              </button>
-            ))}
-          </div>
-        </div>
 
         <p className="text-center text-gray-500 text-xs mt-5">
           Don't have an account?{' '}

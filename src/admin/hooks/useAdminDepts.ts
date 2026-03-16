@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabaseAdmin } from '../../lib/supabaseAdmin'
+import { db } from '../../lib/supabaseAdmin'
 import type { Department } from '../../types'
 
 export interface DeptPayload {
@@ -15,7 +15,7 @@ export function useAdminDepts() {
 
   const fetchDepts = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabaseAdmin
+    const { data } = await db
       .from('departments')
       .select('*')
       .order('name')
@@ -26,7 +26,7 @@ export function useAdminDepts() {
   useEffect(() => { fetchDepts() }, [fetchDepts])
 
   const createDept = async (payload: DeptPayload) => {
-    const { error } = await supabaseAdmin.from('departments').insert({
+    const { error } = await db.from('departments').insert({
       name:            payload.name,
       color:           payload.color,
       icon:            payload.icon || 'briefcase',
@@ -37,13 +37,13 @@ export function useAdminDepts() {
   }
 
   const updateDept = async (id: string, payload: Partial<DeptPayload>) => {
-    const { error } = await supabaseAdmin.from('departments').update(payload).eq('id', id)
+    const { error } = await db.from('departments').update(payload).eq('id', id)
     if (error) throw error
     await fetchDepts()
   }
 
   const deleteDept = async (id: string) => {
-    const { error } = await supabaseAdmin.from('departments').delete().eq('id', id)
+    const { error } = await db.from('departments').delete().eq('id', id)
     if (error) throw error
     await fetchDepts()
   }
