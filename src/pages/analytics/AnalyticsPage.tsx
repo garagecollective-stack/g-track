@@ -6,7 +6,6 @@ import {
 import { useApp } from '../../context/AppContext'
 import { useTasks } from '../../hooks/useTasks'
 import { useProjects } from '../../hooks/useProjects'
-import { useTeam } from '../../hooks/useTeam'
 import { isOverdue } from '../../utils/helpers'
 
 const COLORS = { backlog: '#F97316', inProgress: '#3b82f6', done: '#22c55e' }
@@ -27,7 +26,6 @@ export function AnalyticsPage() {
   const filters = currentUser?.role === 'member' ? { assigneeId: currentUser.id } : currentUser?.role === 'teamLead' ? { department: currentUser.department || undefined } : {}
   const { tasks, loading: taskLoading } = useTasks(filters)
   const { projects } = useProjects()
-  const { members } = useTeam()
 
   const total = tasks.length
   const completed = tasks.filter(t => t.status === 'done').length
@@ -49,17 +47,6 @@ export function AnalyticsPage() {
     { name: 'In Progress', value: tasks.filter(t => t.status === 'inProgress').length },
     { name: 'Done', value: tasks.filter(t => t.status === 'done').length },
   ]
-
-  const memberWorkload = useMemo(() => {
-    const filterMembers = currentUser?.role === 'teamLead'
-      ? members.filter(m => m.department === currentUser.department)
-      : members
-    return filterMembers.slice(0, 8).map(m => ({
-      name: m.name.split(' ')[0],
-      inProgress: tasks.filter(t => t.assignee_id === m.id && t.status === 'inProgress').length,
-      backlog: tasks.filter(t => t.assignee_id === m.id && t.status === 'backlog').length,
-    }))
-  }, [members, tasks, currentUser])
 
   const projectProgress = useMemo(() =>
     projects.slice(0, 8).map(p => ({
@@ -130,27 +117,7 @@ export function AnalyticsPage() {
           )}
         </div>
 
-        {/* Chart 3: Member workload */}
-        <div className="bg-white border border-gray-100 rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">Member Workload</h3>
-          {memberWorkload.length === 0 ? (
-            <div className="flex items-center justify-center h-[200px] text-sm text-gray-400">No data</div>
-          ) : (
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={memberWorkload} layout="vertical" style={{ fontFamily: 'DM Sans' }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 11, fill: '#6b7280' }} />
-                <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: '#6b7280' }} width={60} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="inProgress" name="In Progress" stackId="a" fill={COLORS.inProgress} />
-                <Bar dataKey="backlog" name="Backlog" stackId="a" fill={COLORS.backlog} radius={[0,3,3,0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-
-        {/* Chart 4: Project progress */}
+        {/* Chart 3: Project progress */}
         <div className="bg-white border border-gray-100 rounded-xl p-5">
           <h3 className="text-sm font-semibold text-gray-900 mb-4">Project Progress</h3>
           {projectProgress.length === 0 ? (

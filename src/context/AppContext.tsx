@@ -10,9 +10,19 @@ interface AppContextType {
   authLoading: boolean
   signOut: () => Promise<void>
   refreshUser: () => Promise<void>
+  updateTheme: (theme: 'light' | 'dark') => Promise<void>
   toasts: ToastItem[]
   addToast: (toast: Omit<ToastItem, 'id'>) => void
   removeToast: (id: string) => void
+}
+
+function applyTheme(theme: 'light' | 'dark') {
+  if (theme === 'dark') {
+    document.documentElement.classList.add('dark')
+  } else {
+    document.documentElement.classList.remove('dark')
+  }
+  localStorage.setItem('gtrack-theme', theme)
 }
 
 const AppContext = createContext<AppContextType | null>(null)
@@ -23,11 +33,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [authLoading, setAuthLoading] = useState(true)
   const [toasts, setToasts] = useState<ToastItem[]>([])
 
-  // Always force light mode — remove dark class if previously stored
+  // Apply theme: prefer DB value, fall back to localStorage for fast initial paint
   useEffect(() => {
-    document.documentElement.classList.remove('dark')
-    localStorage.removeItem('gtrack-theme')
+    const stored = localStorage.getItem('gtrack-theme') as 'light' | 'dark' | null
+    if (stored === 'dark') document.documentElement.classList.add('dark')
+    else document.documentElement.classList.remove('dark')
   }, [])
+
+  useEffect(() => {
+    if (!currentUser) return
+    const theme = currentUser.theme ?? 'light'
+    applyTheme(theme)
+  }, [currentUser])
 
   // Request browser push notification permission once after login
   useEffect(() => {
@@ -90,7 +107,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut()
     setCurrentUser(null)
     setSession(null)
+    applyTheme('light')
   }, [])
+
+  const updateTheme = useCallback(async (theme: 'light' | 'dark') => {
+    applyTheme(theme)
+    setCurrentUser(prev => prev ? { ...prev, theme } : prev)
+    if (session?.user.id) {
+      const { error } = await supabase.from('profiles').update({ theme }).eq('id', session.user.id)
+      if (error) throw error
+    }
+  }, [session])
 
   const addToast = useCallback((toast: Omit<ToastItem, 'id'>) => {
     const id = Math.random().toString(36).substring(2) + Date.now().toString(36)
@@ -107,7 +134,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   return (
     <AppContext.Provider value={{
       currentUser, session, authLoading,
-      signOut, refreshUser,
+      signOut, refreshUser, updateTheme,
       toasts, addToast, removeToast,
     }}>
       {children}

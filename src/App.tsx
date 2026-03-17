@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AppProvider, useApp } from './context/AppContext'
+import { ChatProvider } from './context/ChatContext'
 import { AdminProvider } from './admin/context/AdminContext'
 import { DashboardLayout } from './layouts/DashboardLayout'
 import { AdminLayout } from './admin/layouts/AdminLayout'
@@ -23,6 +24,7 @@ import { ProfilePage } from './pages/profile/ProfilePage'
 import { SettingsPage } from './pages/settings/SettingsPage'
 import { TodoPage } from './pages/todos/TodoPage'
 import { IssuesPage } from './pages/issues/IssuesPage'
+import { WorkloadDashboard } from './pages/workload/WorkloadDashboard'
 import { LoadingSpinner } from './shared/LoadingSpinner'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -82,6 +84,7 @@ export default function App() {
         {/* ── Main App ── */}
         <Route path="/*" element={
           <AppProvider>
+            <ChatProvider>
             <Routes>
               <Route path="/"               element={<SignInPage />} />
               <Route path="/signup"         element={<SignUpPage />} />
@@ -103,10 +106,12 @@ export default function App() {
                 <Route path="todos"       element={<TodoPage />} />
                 <Route path="settings"    element={<DirectorRoute><SettingsPage /></DirectorRoute>} />
                 <Route path="issues"      element={<IssueRoute><IssuesPage /></IssueRoute>} />
+                <Route path="workload"   element={<WorkloadDashboard />} />
               </Route>
 
               <Route path="*"             element={<Navigate to="/" replace />} />
             </Routes>
+            </ChatProvider>
           </AppProvider>
         } />
       </Routes>

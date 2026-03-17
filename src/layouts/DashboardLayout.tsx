@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Outlet, NavLink, useNavigate, Navigate } from 'react-router-dom'
 import logoImg from '../assets/logo.png'
+import logoWhiteImg from '../assets/logo-white.png'
 import {
   LayoutDashboard, Users, CheckSquare, BarChart2, Calendar,
   Settings, Search, ChevronDown, User, LogOut,
-  Home, MoreHorizontal, ListTodo, AlertCircle,
+  Home, MoreHorizontal, ListTodo, AlertCircle, Activity, MessageCircle,
 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { useIssues } from '../hooks/useIssues'
@@ -14,6 +15,34 @@ import { NotificationPanel } from '../components/NotificationPanel'
 import { GlobalSearch } from '../components/GlobalSearch'
 import { Toast } from '../shared/Toast'
 import { LoadingSpinner } from '../shared/LoadingSpinner'
+import { useChat } from '../context/ChatContext'
+import { ChatBubble } from '../components/chat/ChatBubble'
+import { ChatDrawer } from '../components/chat/ChatDrawer'
+
+function ChatNavButton() {
+  const { openChat, totalUnread } = useChat()
+  return (
+    <button
+      onClick={() => openChat()}
+      className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#141414] transition-colors"
+      aria-label="Open chat"
+    >
+      <MessageCircle
+        size={18}
+        className={totalUnread > 0 ? 'text-[#0A5540] dark:text-[#22C55E]' : 'text-gray-500 dark:text-[#B3B3B3]'}
+      />
+      {totalUnread > 0 && (
+        <>
+          {/* Pulsing ring */}
+          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-red-400 opacity-75 animate-ping" />
+          <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-0.5 leading-none">
+            {totalUnread > 9 ? '9+' : totalUnread}
+          </span>
+        </>
+      )}
+    </button>
+  )
+}
 
 const ROLE_BADGE: Record<string, string> = {
   director: 'BOSS',
@@ -30,13 +59,13 @@ function NavItem({ to, icon: Icon, label, badge }: {
       className={({ isActive }) =>
         `group flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 ${
           isActive
-            ? 'bg-[#0A5540] text-white'
-            : 'text-gray-500 hover:bg-[#0A5540]'
+            ? 'bg-[#0A5540] dark:bg-[rgba(34,197,94,0.12)] text-white dark:text-[#22C55E]'
+            : 'text-gray-500 dark:text-[#B3B3B3] hover:bg-[#0A5540] dark:hover:bg-[#141414] hover:text-white dark:hover:text-white'
         }`
       }
     >
-      <Icon size={16} className="text-inherit group-hover:text-white" />
-      <span className="group-hover:text-white">{label}</span>
+      <Icon size={16} className="text-inherit" />
+      <span>{label}</span>
       {badge != null && badge > 0 && (
         <span className="ml-0.5 px-1.5 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded-full leading-none">
           {badge > 9 ? '9+' : badge}
@@ -82,6 +111,7 @@ export function DashboardLayout() {
 
   const isDirector = currentUser.role === 'director'
   const isMember   = currentUser.role === 'member'
+  const logo       = currentUser.theme === 'dark' ? logoWhiteImg : logoImg
 
   const navLinks = [
     { to: '/app/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -89,6 +119,7 @@ export function DashboardLayout() {
     { to: '/app/tasks', icon: CheckSquare, label: 'Tasks' },
     { to: '/app/todos', icon: ListTodo, label: 'To-Do' },
     ...(!isMember ? [{ to: '/app/issues', icon: AlertCircle, label: 'Issues', badge: openIssueCount }] : []),
+    { to: '/app/workload', icon: Activity, label: 'Workload' },
     { to: '/app/analytics', icon: BarChart2, label: 'Analytics' },
     { to: '/app/calendar', icon: Calendar, label: 'Calendar' },
   ]
@@ -99,12 +130,12 @@ export function DashboardLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0B0F0C]">
       {/* ── Desktop Navbar ── */}
-      <header className="sticky top-0 z-40 h-14 bg-white border-b border-gray-200 hidden md:flex items-center px-6 gap-4">
+      <header className="sticky top-0 z-40 h-14 bg-white dark:bg-[#000000]/90 dark:backdrop-blur-md border-b border-gray-200 dark:border-[#1F2937] hidden md:flex items-center px-6 gap-4">
         {/* Logo */}
         <NavLink to="/app/dashboard" className="flex items-center shrink-0 mr-2">
-          <img src={logoImg} alt="G-Track" className="h-8 w-auto" />
+          <img src={logo} alt="G-Track" className="h-8 w-[130px] object-contain object-left" />
         </NavLink>
 
         {/* Nav links */}
@@ -118,7 +149,7 @@ export function DashboardLayout() {
           {/* Search */}
           <button
             onClick={() => setShowSearch(true)}
-            className="hidden lg:flex items-center gap-2 text-sm text-gray-400 bg-gray-100 rounded-lg px-3 py-1.5 hover:bg-gray-200 transition-colors"
+            className="hidden lg:flex items-center gap-2 text-sm text-gray-400 dark:text-[#6B7280] bg-gray-100 dark:bg-[#141414] border dark:border-[#1F2937] rounded-lg px-3 py-1.5 hover:bg-gray-200 dark:hover:bg-[#1F2937] transition-colors"
           >
             <Search size={14} />
             <span className="text-xs">Search...</span>
@@ -128,6 +159,9 @@ export function DashboardLayout() {
           {/* Notification bell + panel (self-contained) */}
           <NotificationPanel />
 
+          {/* Chat icon (team lead + member only) */}
+          {!isDirector && <ChatNavButton />}
+
           {/* User pill */}
           <div className="relative">
             <button
@@ -136,39 +170,39 @@ export function DashboardLayout() {
             >
               <Avatar name={currentUser.name} size="sm" status={currentUser.user_status} imageUrl={currentUser.avatar_url} />
               <span className="text-sm font-medium text-gray-700 hidden lg:block">{currentUser.name.split(' ')[0]}</span>
-              <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-[#0A5540]/10 text-[#0A5540]">
+              <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-[#0A5540]/10 dark:bg-[#22C55E]/10 text-[#0A5540] dark:text-[#22C55E]">
                 {ROLE_BADGE[currentUser.role]}
               </span>
               <ChevronDown size={13} className="text-gray-400 hidden lg:block" />
             </button>
 
             {showUserMenu && (
-              <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden py-1">
-                <div className="px-4 py-3 border-b border-gray-100">
-                  <p className="text-sm font-semibold text-gray-900">{currentUser.name}</p>
-                  <p className="text-xs text-gray-400 truncate">{currentUser.email}</p>
+              <div className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-[#0D0D0D] border border-gray-200 dark:border-[#1F2937] rounded-xl shadow-xl dark:shadow-[0_8px_40px_rgba(0,0,0,0.8)] z-50 overflow-hidden py-1">
+                <div className="px-4 py-3 border-b border-gray-100 dark:border-[#1F2937]">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{currentUser.name}</p>
+                  <p className="text-xs text-gray-400 dark:text-[#6B7280] truncate">{currentUser.email}</p>
                   {currentUser.department && (
-                    <p className="text-xs text-gray-400 mt-0.5">{currentUser.department}</p>
+                    <p className="text-xs text-gray-400 dark:text-[#6B7280] mt-0.5">{currentUser.department}</p>
                   )}
                 </div>
                 <div className="p-1">
                   <button onClick={() => { navigate('/app/profile'); setShowUserMenu(false) }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
-                    <User size={14} className="text-gray-400" /> My Profile
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 dark:text-[#B3B3B3] hover:bg-gray-50 dark:hover:bg-[#141414] rounded-lg transition-colors">
+                    <User size={14} className="text-gray-400 dark:text-[#6B7280]" /> My Profile
                   </button>
                   <button onClick={() => { navigate('/app/todos'); setShowUserMenu(false) }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
-                    <ListTodo size={14} className="text-gray-400" /> My To-Do
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 dark:text-[#B3B3B3] hover:bg-gray-50 dark:hover:bg-[#141414] rounded-lg transition-colors">
+                    <ListTodo size={14} className="text-gray-400 dark:text-[#6B7280]" /> My To-Do
                   </button>
                   {isDirector && (
                     <button onClick={() => { navigate('/app/settings'); setShowUserMenu(false) }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
-                      <Settings size={14} className="text-gray-400" /> Settings
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 dark:text-[#B3B3B3] hover:bg-gray-50 dark:hover:bg-[#141414] rounded-lg transition-colors">
+                      <Settings size={14} className="text-gray-400 dark:text-[#6B7280]" /> Settings
                     </button>
                   )}
-                  <div className="border-t border-gray-100 my-1" />
+                  <div className="border-t border-gray-100 dark:border-[#1F2937] my-1" />
                   <button onClick={() => { setShowUserMenu(false); setShowSignOutConfirm(true) }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-lg transition-colors">
                     <LogOut size={14} /> Sign Out
                   </button>
                 </div>
@@ -179,9 +213,9 @@ export function DashboardLayout() {
       </header>
 
       {/* ── Mobile top bar ── */}
-      <header className="md:hidden sticky top-0 z-40 h-14 bg-white border-b border-gray-200 flex items-center px-4 justify-between">
+      <header className="md:hidden sticky top-0 z-40 h-14 bg-white dark:bg-[#000000]/90 dark:backdrop-blur-md border-b border-gray-200 dark:border-[#1F2937] flex items-center px-4 justify-between">
         <div className="flex items-center">
-          <img src={logoImg} alt="G-Track" className="h-8 w-auto" />
+          <img src={logo} alt="G-Track" className="h-8 w-[130px] object-contain object-left" />
         </div>
         <div className="flex items-center gap-1.5">
           <button onClick={() => setShowSearch(true)} className="p-2 text-gray-500">
@@ -198,7 +232,7 @@ export function DashboardLayout() {
       </main>
 
       {/* ── Mobile bottom tab bar ── */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 h-16 bg-white border-t border-gray-200 flex items-center justify-around px-1">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 h-16 bg-white dark:bg-[#000000] border-t border-gray-200 dark:border-[#1F2937] flex items-center justify-around px-1">
         {isMember ? (
           // Member: Home, Tasks, Analytics, Calendar
           <>
@@ -251,8 +285,8 @@ export function DashboardLayout() {
       {/* ── Mobile "More" drawer ── */}
       {showMoreDrawer && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-end md:hidden" onClick={() => setShowMoreDrawer(false)}>
-          <div className="bg-white w-full rounded-t-2xl p-5 space-y-1 animate-slide-up" onClick={e => e.stopPropagation()}>
-            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
+          <div className="bg-white dark:bg-[#0D0D0D] w-full rounded-t-2xl p-5 space-y-1 animate-slide-up border-t dark:border-[#1F2937]" onClick={e => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-gray-200 dark:bg-[#1F2937] rounded-full mx-auto mb-4" />
             {!isMember && (
               <NavLink to="/app/team" onClick={() => setShowMoreDrawer(false)}
                 className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${isActive ? 'bg-[#0A5540] text-white' : 'text-gray-700 hover:bg-[#0A5540] hover:text-white'}`}>
@@ -281,9 +315,9 @@ export function DashboardLayout() {
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors">
               <Search size={18} /> Search
             </button>
-            <div className="border-t border-gray-100 my-1 pt-1">
+            <div className="border-t border-gray-100 dark:border-[#1F2937] my-1 pt-1">
               <button onClick={() => { setShowMoreDrawer(false); setShowSignOutConfirm(true) }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50">
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
                 <LogOut size={18} /> Sign Out
               </button>
             </div>
@@ -313,6 +347,10 @@ export function DashboardLayout() {
         cancelLabel="Stay"
         variant="warning"
       />
+
+      {/* Chat — visible to team leads and members only */}
+      {!isDirector && <ChatBubble />}
+      <ChatDrawer />
     </div>
   )
 }

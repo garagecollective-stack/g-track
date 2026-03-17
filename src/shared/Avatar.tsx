@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { getInitials } from '../utils/helpers'
 
 interface AvatarProps {
@@ -31,20 +32,34 @@ const statusSizes = {
 }
 
 export function Avatar({ name, size = 'md', imageUrl, status, className = '' }: AvatarProps) {
+  const [imgError, setImgError] = useState(false)
+
+  // Reset error state when the URL changes (e.g. after a new upload)
+  useEffect(() => {
+    setImgError(false)
+  }, [imageUrl])
+
+  const showImage = imageUrl && !imgError
+
   return (
     <div className={`relative inline-flex shrink-0 ${className}`}>
       <div
-        className={`${sizeMap[size]} rounded-full bg-[#0A5540] text-white font-semibold flex items-center justify-center overflow-hidden`}
+        className={`${sizeMap[size]} rounded-full bg-[#0A5540] dark:bg-[#22C55E] text-white dark:text-black font-semibold flex items-center justify-center overflow-hidden`}
       >
-        {imageUrl ? (
-          <img src={imageUrl} alt={name} className="w-full h-full object-cover" />
+        {showImage ? (
+          <img
+            src={imageUrl}
+            alt={name}
+            className="w-full h-full object-cover"
+            onError={() => setImgError(true)}
+          />
         ) : (
           <span style={{ fontFamily: 'DM Sans, sans-serif' }}>{getInitials(name)}</span>
         )}
       </div>
       {status && (
         <span
-          className={`absolute bottom-0 right-0 ${statusSizes[size]} ${statusColors[status]} rounded-full ring-2 ring-white`}
+          className={`absolute bottom-0 right-0 ${statusSizes[size]} ${statusColors[status]} rounded-full ring-2 ring-white dark:ring-black`}
         />
       )}
     </div>

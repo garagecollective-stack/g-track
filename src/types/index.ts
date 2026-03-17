@@ -21,6 +21,7 @@ export interface Profile {
   manager_ids?: string[]
   invited_by: string | null
   created_at: string
+  theme?: 'light' | 'dark'
 }
 
 export interface Department {

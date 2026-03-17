@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { MessageCircle } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { useTeam } from '../../hooks/useTeam'
 import { useTasks } from '../../hooks/useTasks'
@@ -7,6 +8,7 @@ import { RoleBadge } from '../../shared/Badge'
 import { ProgressBar } from '../../shared/ProgressBar'
 import { MemberDetailDrawer } from '../../modals/MemberDetailDrawer'
 import { getDeptColor } from '../../utils/helpers'
+import { useChat } from '../../context/ChatContext'
 import type { Profile } from '../../types'
 
 export function TeamPage() {
@@ -16,6 +18,13 @@ export function TeamPage() {
   const [selected, setSelected] = useState<Profile | null>(null)
 
   const isDirector = currentUser?.role === 'director'
+  const { startDM, openChat } = useChat()
+
+  const handleMessageMember = async (e: React.MouseEvent, memberId: string) => {
+    e.stopPropagation()
+    const roomId = await startDM(memberId)
+    openChat(roomId)
+  }
 
   const getDeptMembers = (dept: string) =>
     members.filter(m => m.department === dept)
@@ -55,9 +64,9 @@ export function TeamPage() {
                 {/* Section header */}
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-                  <span className="text-sm font-semibold text-gray-700">{dept}</span>
-                  <span className="text-sm text-gray-400">{deptMembers.length} {deptMembers.length === 1 ? 'person' : 'people'}</span>
-                  <div className="flex-1 h-px bg-gray-100 ml-2" />
+                  <span className="text-sm font-semibold text-gray-700 dark:text-[#E5E7EB]">{dept}</span>
+                  <span className="text-sm text-gray-400 dark:text-[#6B7280]">{deptMembers.length} {deptMembers.length === 1 ? 'person' : 'people'}</span>
+                  <div className="flex-1 h-px bg-gray-100 dark:bg-[#1F2937] ml-2" />
                 </div>
 
                 {/* Member cards */}
@@ -71,14 +80,24 @@ export function TeamPage() {
                       <div
                         key={member.id}
                         onClick={() => setSelected(member)}
-                        className="bg-white border border-gray-100 rounded-xl p-5 text-center cursor-pointer hover:border-[#0A5540]/30 hover:shadow-sm transition-all"
+                        className="bg-white dark:bg-[#0D0D0D] border border-gray-100 dark:border-[#1F2937] rounded-xl p-5 text-center cursor-pointer hover:border-[#0A5540]/30 dark:hover:border-[#374151] dark:hover:bg-[#141414] hover:shadow-sm transition-all"
                       >
                         <div className="flex justify-center mb-3">
                           <Avatar name={member.name} size="lg" status={member.user_status} imageUrl={member.avatar_url} />
                         </div>
                         <h3 className="text-sm font-semibold text-gray-900">{member.name}</h3>
                         <p className="text-xs text-gray-400 mt-0.5 truncate">{member.email}</p>
-                        <div className="mt-2"><RoleBadge role={member.role} /></div>
+                        <div className="flex items-center justify-center gap-2 mt-2">
+                          <RoleBadge role={member.role} />
+                        </div>
+                        {!isDirector && member.id !== currentUser?.id && (
+                          <button
+                            onClick={e => handleMessageMember(e, member.id)}
+                            className="mt-2 flex items-center gap-1 text-[11px] font-medium text-[#0A5540] dark:text-[#22C55E] hover:underline"
+                          >
+                            <MessageCircle size={11} /> Message
+                          </button>
+                        )}
 
                         <div className="grid grid-cols-3 gap-2 mt-4 border-t border-gray-100 pt-3">
                           {[
@@ -87,8 +106,8 @@ export function TeamPage() {
                             { label: 'Done', value: counts.done },
                           ].map(s => (
                             <div key={s.label}>
-                              <p className="text-base font-bold text-gray-900" style={{ fontFamily: 'DM Mono' }}>{s.value}</p>
-                              <p className="text-[11px] text-gray-400">{s.label}</p>
+                              <p className="text-base font-semibold text-gray-900 dark:text-white" style={{ fontFamily: 'JetBrains Mono, DM Mono, monospace', fontFeatureSettings: '"tnum"' }}>{s.value}</p>
+                              <p className="text-[11px] text-gray-400 dark:text-[#9CA3AF] mt-0.5">{s.label}</p>
                             </div>
                           ))}
                         </div>
@@ -96,7 +115,7 @@ export function TeamPage() {
                         <div className="mt-3">
                           <div className="flex justify-between mb-1">
                             <span className="text-[11px] text-gray-400">Completion</span>
-                            <span className="text-[11px] font-medium text-gray-600" style={{ fontFamily: 'DM Mono' }}>{completion}%</span>
+                            <span className="text-[11px] font-medium text-gray-600 dark:text-[#9CA3AF]" style={{ fontFamily: 'JetBrains Mono, DM Mono, monospace', fontFeatureSettings: '"tnum"' }}>{completion}%</span>
                           </div>
                           <ProgressBar value={completion} size="sm" />
                         </div>

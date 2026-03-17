@@ -299,7 +299,7 @@ export function MemberDashboard() {
       {/* Floating Action Button — Raise Issue */}
       <button
         onClick={() => setShowRaiseIssue(true)}
-        className="fixed bottom-20 right-4 md:bottom-6 md:right-6 bg-amber-500 hover:bg-amber-600 text-white rounded-full px-4 py-3 shadow-lg flex items-center gap-2 text-sm font-medium transition-colors z-40"
+        className="fixed bottom-[148px] right-4 md:bottom-20 md:right-6 bg-amber-500 hover:bg-amber-600 text-white rounded-full px-4 py-3 shadow-lg flex items-center gap-2 text-sm font-medium transition-colors z-40"
       >
         <AlertCircle size={18} />
         <span className="hidden sm:inline">Raise Issue</span>
