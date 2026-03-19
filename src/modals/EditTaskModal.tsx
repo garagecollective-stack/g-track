@@ -139,7 +139,7 @@ export function EditTaskModal({ open, onClose, task }: Props) {
               </select>
             </div>
           )}
-          {currentUser?.role === 'director' && (task.creator || task.created_by_name) && (
+          {(currentUser?.role === 'director' || currentUser?.role === 'teamLead') && (task.creator || task.created_by_name) && (
             <div>
               <label className={labelCls}>Assigned By</label>
               <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
@@ -147,10 +147,15 @@ export function EditTaskModal({ open, onClose, task }: Props) {
                   task.creator.name === task.assignee_name ? (
                     <em className="text-xs text-gray-400">Self-assigned</em>
                   ) : (
-                    <>
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Avatar name={task.creator.name} size="xs" imageUrl={task.creator.avatar_url} />
                       <span className="text-sm text-gray-600">{task.creator.name}</span>
-                    </>
+                      {currentUser?.role === 'teamLead' && task.creator.department && task.creator.department !== currentUser.department && (
+                        <span className="text-[10px] bg-purple-100 text-purple-700 rounded-full px-2 py-0.5 font-medium">
+                          ↔ {task.creator.department}
+                        </span>
+                      )}
+                    </div>
                   )
                 ) : task.created_by_name ? (
                   <>

@@ -41,15 +41,33 @@ export function useProjects() {
   useEffect(() => {
     fetchProjects()
 
-    channelRef.current = supabase
-      .channel('projects-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, () => {
-        fetchProjects()
+    const channel = supabase
+      .channel(`projects-rt-${currentUser?.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'projects' }, (payload) => {
+        const newProject = payload.new as Project
+        // Only add non-archived projects (respects the same filter as fetchProjects)
+        if (newProject.is_archived) return
+        setProjects(prev => prev.find(p => p.id === newProject.id) ? prev : [newProject, ...prev])
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'projects' }, (payload) => {
+        const updated = payload.new as Project
+        if (updated.is_archived) {
+          // Archived project — remove from the list
+          setProjects(prev => prev.filter(p => p.id !== updated.id))
+        } else {
+          // Merge updated fields, preserving joined owner/members from existing state
+          setProjects(prev => prev.map(p => p.id === updated.id ? { ...p, ...updated } : p))
+        }
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'projects' }, (payload) => {
+        setProjects(prev => prev.filter(p => p.id !== payload.old.id))
       })
       .subscribe()
 
+    channelRef.current = channel
+
     return () => {
-      channelRef.current?.unsubscribe()
+      channel.unsubscribe()
     }
   }, [fetchProjects])
 
@@ -97,7 +115,7 @@ export function useProjects() {
       target_name: inserted.name,
     })
 
-    await fetchProjects()
+    // Real-time INSERT event handles state update
     return inserted
   }
 
@@ -111,7 +129,7 @@ export function useProjects() {
       target_id: id,
       target_name: data.name,
     })
-    await fetchProjects()
+    // Real-time UPDATE event handles state update
   }
 
   const deleteProject = async (id: string, name?: string) => {
@@ -124,7 +142,7 @@ export function useProjects() {
       target_id: id,
       target_name: name,
     })
-    await fetchProjects()
+    // Real-time DELETE event handles state update
   }
 
   const archiveProject = async (id: string, name?: string) => {
@@ -137,7 +155,7 @@ export function useProjects() {
       target_id: id,
       target_name: name,
     })
-    await fetchProjects()
+    // Real-time UPDATE event (is_archived: true) removes the project from state
   }
 
   return { projects, loading, error, fetchProjects, createProject, updateProject, deleteProject, archiveProject }

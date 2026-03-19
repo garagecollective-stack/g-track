@@ -10,9 +10,8 @@ import { ProgressBar } from '../../shared/ProgressBar'
 import { PriorityBadge } from '../../shared/PriorityBadge'
 import { StatusBadge } from '../../shared/StatusBadge'
 import { SkeletonCard } from '../../shared/SkeletonCard'
-import { AssignTaskModal } from '../../modals/AssignTaskModal'
-import { NewProjectModal } from '../../modals/NewProjectModal'
 import { IssueDetailDrawer } from '../../modals/IssueDetailDrawer'
+import { useDashboardModals } from '../../layouts/DashboardLayout'
 import { TodoWidget } from '../todos/TodoWidget'
 import { OverdueAlertBanner } from '../../components/OverdueAlertBanner'
 import { useNavigate } from 'react-router-dom'
@@ -64,7 +63,7 @@ export function TeamLeadDashboard() {
   const { projects, loading: projLoading } = useProjects()
   const { members } = useTeam()
 
-  // Fix #5: collect IDs of all members in this department so useTasks can
+  // collect IDs of all members in this department so useTasks can
   // OR-include cross-department tasks that were assigned to team members
   const deptMemberIds = useMemo(
     () => members.filter(m => m.department === dept).map(m => m.id),
@@ -76,10 +75,10 @@ export function TeamLeadDashboard() {
     assigneeIds: deptMemberIds,
   })
   const { issues } = useIssues()
+  const { openAssignTask, openNewProject } = useDashboardModals()
   const navigate = useNavigate()
-  const [showAssignTask, setShowAssignTask] = useState(false)
-  const [showNewProject, setShowNewProject] = useState(false)
   const [openIssue, setOpenIssue] = useState<Issue | null>(null)
+  const [taskFilter, setTaskFilter] = useState<'all' | 'my_dept' | 'cross_dept'>('all')
 
   // Trigger overdue check at most once per hour
   useEffect(() => {
@@ -94,10 +93,20 @@ export function TeamLeadDashboard() {
     }
   }, [])
 
-  const deptProjects = projects.filter(p => p.department === dept)
-  const deptMembers  = members.filter(m => m.department === dept)
-  const doneTasks    = tasks.filter(t => t.status === 'done').length
-  const overdueTasks = tasks.filter(t => (t.is_overdue || isOverdue(t.due_date)) && t.status !== 'done').length
+  const deptProjects      = projects.filter(p => p.department === dept)
+  const crossDeptProjects = projects.filter(p => p.department !== dept)
+  const deptMembers       = members.filter(m => m.department === dept)
+  const doneTasks         = tasks.filter(t => t.status === 'done').length
+  const overdueTasks      = tasks.filter(t => (t.is_overdue || isOverdue(t.due_date)) && t.status !== 'done').length
+  const crossDeptTasks    = tasks.filter(t => t.department !== dept)
+
+  const filteredRecentTasks = tasks
+    .filter(t => {
+      if (taskFilter === 'my_dept') return t.department === dept
+      if (taskFilter === 'cross_dept') return t.department !== dept
+      return true
+    })
+    .slice(0, 6)
 
   const deptIssues = issues.filter(i => i.department === dept)
   const recentIssues = deptIssues.filter(i => i.status === 'open' || i.status === 'in_review').slice(0, 3)
@@ -113,11 +122,11 @@ export function TeamLeadDashboard() {
           <p className="text-sm text-gray-500 mt-1">Manage your team, projects and tasks</p>
         </div>
         <div className="flex gap-2 shrink-0">
-          <button onClick={() => setShowAssignTask(true)}
+          <button onClick={() => openAssignTask()}
             className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-[#0A5540] bg-[#edf8f4] border border-[#0A5540]/20 rounded-lg hover:bg-[#d6f0e8] transition-colors">
             <ListTodo size={14} /> Assign Task
           </button>
-          <button onClick={() => setShowNewProject(true)}
+          <button onClick={() => openNewProject()}
             className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-[#0A5540] rounded-lg hover:bg-[#0d6b51] transition-colors shadow-sm">
             <Plus size={15} /> New Project
           </button>
@@ -127,9 +136,25 @@ export function TeamLeadDashboard() {
       {/* Overdue Alert Banner */}
       <OverdueAlertBanner />
 
+      {/* Cross-dept alert banner */}
+      {crossDeptTasks.length > 0 && (
+        <div className="mb-4 flex items-center gap-2 bg-purple-50 border border-purple-200 rounded-xl px-4 py-3 text-sm text-purple-700">
+          <span className="font-bold text-base leading-none">↔</span>
+          <span>
+            <span className="font-semibold">{crossDeptTasks.length}</span> cross-department task{crossDeptTasks.length !== 1 ? 's' : ''} assigned to your team
+          </span>
+          <button
+            onClick={() => setTaskFilter('cross_dept')}
+            className="ml-auto text-xs font-medium underline hover:no-underline"
+          >
+            View
+          </button>
+        </div>
+      )}
+
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5 mb-6">
-        <StatCard icon={Folder}        value={deptProjects.length} label="Projects"    iconColor="text-indigo-600" iconBg="bg-indigo-50" />
+        <StatCard icon={Folder}        value={deptProjects.length + crossDeptProjects.length} label="Projects"    iconColor="text-indigo-600" iconBg="bg-indigo-50" />
         <StatCard icon={CheckSquare}   value={tasks.length}        label="Total Tasks" iconColor="text-blue-600"   iconBg="bg-blue-50"   />
         <StatCard
           icon={AlertTriangle}
@@ -148,28 +173,43 @@ export function TeamLeadDashboard() {
         <div className="flex-1 min-w-0">
           <div className="bg-white border border-gray-100 rounded-2xl shadow-sm">
             <div className="px-5 py-4 border-b border-gray-100">
-              <h2 className="text-base font-bold text-gray-900">Department Projects</h2>
+              <h2 className="text-base font-bold text-gray-900">
+                Projects
+                {crossDeptProjects.length > 0 && (
+                  <span className="ml-2 text-[11px] font-medium text-purple-600 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded-full">
+                    +{crossDeptProjects.length} cross-dept
+                  </span>
+                )}
+              </h2>
             </div>
             <div className="p-5 space-y-3">
               {projLoading ? (
                 <SkeletonCard count={3} />
-              ) : deptProjects.length === 0 ? (
+              ) : (deptProjects.length + crossDeptProjects.length) === 0 ? (
                 <div className="text-center py-10 text-gray-400">
                   <Folder size={36} className="mx-auto mb-3 opacity-30" />
                   <p className="text-sm">No projects yet</p>
                 </div>
-              ) : deptProjects.map(project => {
+              ) : [...deptProjects, ...crossDeptProjects].map(project => {
                 const tc = project.task_counts || { todo: 0, active: 0, done: 0 }
                 const overdue = project.is_overdue || (project.due_date && isOverdue(project.due_date))
+                const isCrossDept = project.department !== dept
                 return (
                   <div key={project.id}
                     onClick={() => navigate(`/app/projects/${project.id}`)}
-                    className="border border-gray-100 rounded-xl p-4 hover:border-[#0A5540]/30 hover:shadow-sm transition-all cursor-pointer group">
+                    className={`border rounded-xl p-4 hover:border-[#0A5540]/30 hover:shadow-sm transition-all cursor-pointer group ${isCrossDept ? 'border-purple-100 bg-purple-50/30' : 'border-gray-100'}`}>
                     <div className="flex items-start justify-between mb-2">
                       <div>
-                        <h3 className="text-sm font-bold text-gray-900 group-hover:text-[#0A5540] transition-colors">
-                          {project.name}
-                        </h3>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h3 className="text-sm font-bold text-gray-900 group-hover:text-[#0A5540] transition-colors">
+                            {project.name}
+                          </h3>
+                          {isCrossDept && (
+                            <span className="text-[10px] font-medium text-purple-700 bg-purple-100 rounded-full px-1.5 py-0.5">
+                              ↔ {project.department}
+                            </span>
+                          )}
+                        </div>
                         {project.client && <p className="text-xs text-gray-400 mt-0.5">{project.client}</p>}
                       </div>
                       <div className="flex items-center gap-1.5">
@@ -247,14 +287,29 @@ export function TeamLeadDashboard() {
           <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100">
               <h3 className="text-sm font-bold text-gray-900">Recent Tasks</h3>
+              {crossDeptTasks.length > 0 && (
+                <div className="flex gap-1 mt-2">
+                  {(['all', 'my_dept', 'cross_dept'] as const).map(f => (
+                    <button key={f} onClick={() => setTaskFilter(f)}
+                      className={`text-[10px] px-2 py-0.5 rounded-full font-medium transition-colors ${
+                        taskFilter === f
+                          ? f === 'cross_dept' ? 'bg-purple-600 text-white' : 'bg-[#0A5540] text-white'
+                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      }`}>
+                      {f === 'all' ? 'All' : f === 'my_dept' ? 'My Dept' : `↔ Cross (${crossDeptTasks.length})`}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="divide-y divide-gray-50">
               {taskLoading ? (
                 <div className="p-3"><SkeletonCard count={3} /></div>
-              ) : tasks.slice(0, 6).map(task => {
+              ) : filteredRecentTasks.map(task => {
                 const taskOverdue = task.is_overdue || (isOverdue(task.due_date) && task.status !== 'done')
+                const isCrossTask = task.department !== dept
                 return (
-                  <div key={task.id} className={`flex items-center gap-2 px-4 py-2.5 ${taskOverdue ? 'bg-red-50/40' : ''}`}>
+                  <div key={task.id} className={`flex items-center gap-2 px-4 py-2.5 ${taskOverdue ? 'bg-red-50/40' : isCrossTask ? 'bg-purple-50/30' : ''}`}>
                     <div className={`w-2 h-2 rounded-full shrink-0 ${
                       taskOverdue         ? 'bg-red-500' :
                       task.priority === 'critical' ? 'bg-red-500' :
@@ -262,7 +317,14 @@ export function TeamLeadDashboard() {
                       task.priority === 'medium'   ? 'bg-yellow-400' : 'bg-gray-300'
                     }`} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-gray-900 truncate">{task.title}</p>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <p className="text-xs font-semibold text-gray-900 truncate">{task.title}</p>
+                        {isCrossTask && (
+                          <span className="text-[9px] font-medium text-purple-700 bg-purple-100 rounded-full px-1.5 py-0.5 shrink-0">
+                            ↔ {task.department}
+                          </span>
+                        )}
+                      </div>
                       <p className={`text-xs ${taskOverdue ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
                         {task.assignee_name || '—'}
                         {task.due_date && ` · ${formatDateShort(task.due_date)}`}
@@ -281,8 +343,10 @@ export function TeamLeadDashboard() {
                   </div>
                 )
               })}
-              {!taskLoading && tasks.length === 0 && (
-                <p className="px-4 py-6 text-sm text-gray-400 text-center">No tasks yet</p>
+              {!taskLoading && filteredRecentTasks.length === 0 && (
+                <p className="px-4 py-6 text-sm text-gray-400 text-center">
+                  {taskFilter === 'cross_dept' ? 'No cross-dept tasks' : taskFilter === 'my_dept' ? 'No department tasks' : 'No tasks yet'}
+                </p>
               )}
             </div>
           </div>
@@ -325,8 +389,6 @@ export function TeamLeadDashboard() {
         </div>
       </div>
 
-      <AssignTaskModal open={showAssignTask} onClose={() => setShowAssignTask(false)} />
-      <NewProjectModal open={showNewProject} onClose={() => setShowNewProject(false)} />
       {openIssue && (
         <IssueDetailDrawer
           issue={openIssue}

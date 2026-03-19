@@ -72,11 +72,12 @@ export interface Task {
   due_date: string | null
   created_by_id: string | null
   created_by_name: string | null
+  created_by_department: string | null
   created_at: string
   is_overdue?: boolean
   overdue_alerted_at?: string | null
   assignee?: Profile
-  creator?: { id: string; name: string; avatar_url: string | null }
+  creator?: { id: string; name: string; avatar_url: string | null; department: string | null }
   project?: Project
 }
 

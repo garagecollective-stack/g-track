@@ -6,6 +6,7 @@ import { useTasks } from '../hooks/useTasks'
 import { useProjects } from '../hooks/useProjects'
 import { useApp } from '../context/AppContext'
 import { useToast } from '../hooks/useToast'
+import { usePersistedForm } from '../hooks/usePersistedForm'
 import { friendlyError } from '../utils/helpers'
 import { supabase } from '../lib/supabase'
 import type { Priority, TaskStatus } from '../types'
@@ -24,6 +25,16 @@ interface Props {
   defaultAssigneeId?: string
 }
 
+const INITIAL_FORM = {
+  title: '',
+  description: '',
+  project_id: '',
+  priority: 'medium' as Priority,
+  status: 'backlog' as TaskStatus,
+  assignee_id: '',
+  due_date: '',
+}
+
 export function AssignTaskModal({ open, onClose, projectId, defaultAssigneeId }: Props) {
   const { currentUser } = useApp()
   const { createTask } = useTasks()
@@ -32,15 +43,8 @@ export function AssignTaskModal({ open, onClose, projectId, defaultAssigneeId }:
   const [loading, setLoading] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [assignees, setAssignees] = useState<Assignee[]>([])
-  const [form, setForm] = useState({
-    title: '',
-    description: '',
-    project_id: projectId || '',
-    priority: 'medium' as Priority,
-    status: 'backlog' as TaskStatus,
-    assignee_id: defaultAssigneeId || '',
-    due_date: '',
-  })
+
+  const [form, updateForm, clearForm] = usePersistedForm('assign_task', INITIAL_FORM)
 
   // Fetch all active members + team leads from all departments
   useEffect(() => {
@@ -54,11 +58,18 @@ export function AssignTaskModal({ open, onClose, projectId, defaultAssigneeId }:
       .then(({ data }) => setAssignees(data || []))
   }, [])
 
+  // When the modal opens, update project_id and assignee_id from props (but keep other fields)
   useEffect(() => {
-    if (open) setForm(f => ({ ...f, project_id: projectId || '', assignee_id: defaultAssigneeId || '' }))
+    if (open) {
+      updateForm({
+        project_id: projectId || '',
+        assignee_id: defaultAssigneeId || '',
+      })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, projectId, defaultAssigneeId])
 
-  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
+  const set = (k: string, v: string) => updateForm({ [k]: v } as Partial<typeof INITIAL_FORM>)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -84,8 +95,8 @@ export function AssignTaskModal({ open, onClose, projectId, defaultAssigneeId }:
         due_date: form.due_date || null,
       })
       toast.success('Task created')
+      clearForm()
       onClose()
-      setForm({ title: '', description: '', project_id: '', priority: 'medium', status: 'backlog', assignee_id: '', due_date: '' })
     } catch (err) {
       toast.error(friendlyError(err))
     } finally {

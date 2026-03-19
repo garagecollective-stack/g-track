@@ -8,11 +8,18 @@ import { useProjects } from '../hooks/useProjects'
 import { useTeam } from '../hooks/useTeam'
 import { useApp } from '../context/AppContext'
 import { useToast } from '../hooks/useToast'
+import { usePersistedForm } from '../hooks/usePersistedForm'
 import { friendlyError, generateProjectKey } from '../utils/helpers'
 import { useNavigate } from 'react-router-dom'
 import type { Priority, ProjectStatus } from '../types'
 
 interface Props { open: boolean; onClose: () => void }
+
+const NEW_PROJECT_INITIAL = {
+  name: '', key: '', description: '', client: '', department: '',
+  priority: 'medium' as Priority, status: 'backlog' as ProjectStatus,
+  issue_date: '', due_date: '', sop: '', reference_link: '',
+}
 
 export function NewProjectModal({ open, onClose }: Props) {
   const { currentUser } = useApp()
@@ -28,29 +35,24 @@ export function NewProjectModal({ open, onClose }: Props) {
   const [files, setFiles] = useState<File[]>([])
   const [dragging, setDragging] = useState(false)
   const [selectedMembers, setSelectedMembers] = useState<string[]>([])
-  const [form, setForm] = useState({
-    name: '', key: '', description: '', client: '',
-    department: currentUser?.role === 'teamLead' ? currentUser.department || '' : '',
-    priority: 'medium' as Priority, status: 'backlog' as ProjectStatus,
-    issue_date: '', due_date: '', sop: '', reference_link: '',
-  })
 
+  const [form, updateForm, clearForm] = usePersistedForm('new_project', NEW_PROJECT_INITIAL)
+
+  // On open: reset non-serializable state; set department default for team leads if empty
   useEffect(() => {
-    if (open && currentUser) {
-      setSelectedMembers([currentUser.id])
-      setFiles([])
-      setIsDirty(false)
-      setForm({
-        name: '', key: '', description: '', client: '',
-        department: currentUser.role === 'teamLead' ? currentUser.department || '' : '',
-        priority: 'medium', status: 'backlog',
-        issue_date: '', due_date: '', sop: '', reference_link: '',
-      })
+    if (!open || !currentUser) return
+    setFiles([])
+    setIsDirty(false)
+    setSelectedMembers([currentUser.id])
+    // Set team lead's department if the field is currently empty (first open / after clear)
+    if (!form.department && currentUser.role === 'teamLead' && currentUser.department) {
+      updateForm({ department: currentUser.department })
     }
-  }, [open, currentUser])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   const set = (k: string, v: string) => {
-    setForm(f => ({ ...f, [k]: v }))
+    updateForm({ [k]: v } as Partial<typeof NEW_PROJECT_INITIAL>)
     setIsDirty(true)
   }
 
@@ -103,6 +105,9 @@ export function NewProjectModal({ open, onClose }: Props) {
       toast.success(`Project '${form.name}' created successfully`)
       setIsDirty(false)
       setShowCreateConfirm(false)
+      clearForm()
+      setFiles([])
+      setSelectedMembers([])
       onClose()
       navigate(`/app/projects/${inserted.id}`)
     } catch (err) {
@@ -151,7 +156,7 @@ export function NewProjectModal({ open, onClose }: Props) {
             </button>
           </div>
 
-          {/* Section 1 — Project info (no section label) */}
+          {/* Section 1 — Project info */}
           <div className="mb-6 space-y-3">
             <div className="grid grid-cols-[1fr_140px] gap-3">
               <div>

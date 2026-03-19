@@ -13,9 +13,8 @@ import { PriorityBadge } from '../../shared/PriorityBadge'
 import { StatusBadge } from '../../shared/StatusBadge'
 import { DeptBadge } from '../../shared/Badge'
 import { SkeletonCard } from '../../shared/SkeletonCard'
-import { AssignTaskModal } from '../../modals/AssignTaskModal'
-import { NewProjectModal } from '../../modals/NewProjectModal'
 import { IssueDetailDrawer } from '../../modals/IssueDetailDrawer'
+import { useDashboardModals } from '../../layouts/DashboardLayout'
 import { TodoWidget } from '../todos/TodoWidget'
 import { OverdueAlertBanner } from '../../components/OverdueAlertBanner'
 import { useNavigate } from 'react-router-dom'
@@ -68,11 +67,10 @@ export function DirectorDashboard() {
   const { tasks, loading: taskLoading } = useTasks()
   const { members } = useTeam()
   const { issues } = useIssues()
+  const { openAssignTask, openNewProject } = useDashboardModals()
   const navigate = useNavigate()
   const [statusFilter, setStatusFilter] = useState('all')
   const [deptFilter, setDeptFilter] = useState('all')
-  const [showAssignTask, setShowAssignTask] = useState(false)
-  const [showNewProject, setShowNewProject] = useState(false)
   const [openIssue, setOpenIssue] = useState<Issue | null>(null)
 
   // Trigger overdue check at most once per hour
@@ -118,11 +116,11 @@ export function DirectorDashboard() {
           <p className="text-sm text-gray-500 mt-1">Monitor all projects and teams across Garage Collective</p>
         </div>
         <div className="flex gap-2 shrink-0">
-          <button onClick={() => setShowAssignTask(true)}
+          <button onClick={() => openAssignTask()}
             className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-[#0A5540] bg-[#edf8f4] border border-[#0A5540]/20 rounded-lg hover:bg-[#d6f0e8] transition-colors">
             <CheckSquare size={14} /> Assign Task
           </button>
-          <button onClick={() => setShowNewProject(true)}
+          <button onClick={() => openNewProject()}
             className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-[#0A5540] rounded-lg hover:bg-[#0d6b51] transition-colors shadow-sm">
             <Plus size={15} /> New Project
           </button>
@@ -361,8 +359,6 @@ export function DirectorDashboard() {
         </div>
       </div>
 
-      <AssignTaskModal open={showAssignTask} onClose={() => setShowAssignTask(false)} />
-      <NewProjectModal open={showNewProject} onClose={() => setShowNewProject(false)} />
       {openIssue && (
         <IssueDetailDrawer
           issue={openIssue}

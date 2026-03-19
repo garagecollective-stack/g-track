@@ -119,7 +119,7 @@ export function TableView({ tasks, loading, onBulkDelete, onBulkReassign, onBulk
               </th>
               <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Project</th>
               <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Assignee</th>
-              {currentUser?.role === 'director' && (
+              {(currentUser?.role === 'director' || currentUser?.role === 'teamLead') && (
                 <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Assigned By</th>
               )}
               <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Priority</th>
@@ -138,7 +138,7 @@ export function TableView({ tasks, loading, onBulkDelete, onBulkReassign, onBulk
               <SkeletonRow count={8} />
             ) : sorted.length === 0 ? (
               <tr>
-                <td colSpan={currentUser?.role === 'director' ? 9 : 8} className="py-16 text-center text-sm text-gray-400">No tasks found</td>
+                <td colSpan={(currentUser?.role === 'director' || currentUser?.role === 'teamLead') ? 9 : 8} className="py-16 text-center text-sm text-gray-400">No tasks found</td>
               </tr>
             ) : sorted.map(task => {
               const taskOverdue = (task.is_overdue || isOverdue(task.due_date)) && task.status !== 'done'
@@ -193,15 +193,22 @@ export function TableView({ tasks, loading, onBulkDelete, onBulkReassign, onBulk
                       )}
                     </div>
                   </td>
-                  {currentUser?.role === 'director' && (
+                  {(currentUser?.role === 'director' || currentUser?.role === 'teamLead') && (
                     <td className="px-4 py-3">
                       {task.creator ? (
                         task.creator.name === task.assignee_name ? (
                           <em className="text-xs text-gray-400">Self-assigned</em>
                         ) : (
-                          <div className="flex items-center gap-2">
-                            <Avatar name={task.creator.name} size="xs" />
-                            <span className="text-sm text-gray-600">{task.creator.name}</span>
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-2">
+                              <Avatar name={task.creator.name} size="xs" />
+                              <span className="text-sm text-gray-600">{task.creator.name}</span>
+                            </div>
+                            {currentUser?.role === 'teamLead' && task.creator.department && task.creator.department !== currentUser.department && (
+                              <span className="text-[10px] bg-purple-100 text-purple-700 rounded-full px-1.5 py-0.5 font-medium w-fit">
+                                {task.creator.department}
+                              </span>
+                            )}
                           </div>
                         )
                       ) : task.created_by_name ? (

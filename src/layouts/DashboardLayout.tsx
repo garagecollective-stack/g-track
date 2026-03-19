@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, createContext, useContext, useMemo } from 'react'
 import { Outlet, NavLink, useNavigate, Navigate } from 'react-router-dom'
+import { NewProjectModal } from '../modals/NewProjectModal'
+import { AssignTaskModal } from '../modals/AssignTaskModal'
 import logoImg from '../assets/logo.png'
 import logoWhiteImg from '../assets/logo-white.png'
 import {
@@ -44,6 +46,20 @@ function ChatNavButton() {
   )
 }
 
+// ── Dashboard modal context ──────────────────────────────────────────────────
+interface DashboardModalsCtxType {
+  openAssignTask: (projectId?: string) => void
+  openNewProject: () => void
+}
+const DashboardModalsCtx = createContext<DashboardModalsCtxType | null>(null)
+
+export function useDashboardModals() {
+  const ctx = useContext(DashboardModalsCtx)
+  if (!ctx) throw new Error('useDashboardModals must be used within DashboardLayout')
+  return ctx
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 const ROLE_BADGE: Record<string, string> = {
   director: 'BOSS',
   teamLead: 'LEAD',
@@ -83,6 +99,19 @@ export function DashboardLayout() {
   const [showSearch, setShowSearch] = useState(false)
   const [showMoreDrawer, setShowMoreDrawer] = useState(false)
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
+
+  // Global modal state — persists across in-app navigation
+  const [showNewProject, setShowNewProject] = useState(false)
+  const [showAssignTask, setShowAssignTask] = useState(false)
+  const [assignTaskProjectId, setAssignTaskProjectId] = useState<string | undefined>()
+
+  const modalsCtx = useMemo<DashboardModalsCtxType>(() => ({
+    openAssignTask: (projectId?: string) => {
+      setAssignTaskProjectId(projectId)
+      setShowAssignTask(true)
+    },
+    openNewProject: () => setShowNewProject(true),
+  }), [])
 
   // Count open issues for badge
   const openIssueCount = issues.filter(i => i.status === 'open').length
@@ -130,6 +159,7 @@ export function DashboardLayout() {
   }
 
   return (
+    <DashboardModalsCtx.Provider value={modalsCtx}>
     <div className="min-h-screen bg-gray-50 dark:bg-[#0B0F0C]">
       {/* ── Desktop Navbar ── */}
       <header className="sticky top-0 z-40 h-14 bg-white dark:bg-[#000000]/90 dark:backdrop-blur-md border-b border-gray-200 dark:border-[#1F2937] hidden md:flex items-center px-6 gap-4">
@@ -351,6 +381,15 @@ export function DashboardLayout() {
       {/* Chat — visible to team leads and members only */}
       {!isDirector && <ChatBubble />}
       <ChatDrawer />
+
+      {/* Global modals — rendered here so they persist across in-app navigation */}
+      <NewProjectModal open={showNewProject} onClose={() => setShowNewProject(false)} />
+      <AssignTaskModal
+        open={showAssignTask}
+        onClose={() => { setShowAssignTask(false); setAssignTaskProjectId(undefined) }}
+        projectId={assignTaskProjectId}
+      />
     </div>
+    </DashboardModalsCtx.Provider>
   )
 }

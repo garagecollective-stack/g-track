@@ -25,7 +25,7 @@ export function useTasks(filters?: TaskFilters) {
     try {
       let query = supabase
         .from('tasks')
-        .select(`*, assignee:profiles!tasks_assignee_id_fkey(id, name, email, role, department, user_status), creator:profiles!tasks_created_by_id_fkey(id, name, avatar_url)`)
+        .select(`*, assignee:profiles!tasks_assignee_id_fkey(id, name, email, role, department, user_status), creator:profiles!tasks_created_by_id_fkey(id, name, avatar_url, department)`)
         .order('created_at', { ascending: false })
 
       if (filters?.projectId) query = query.eq('project_id', filters.projectId)
@@ -77,16 +77,26 @@ export function useTasks(filters?: TaskFilters) {
   useEffect(() => {
     fetchTasks()
 
-    const channelName = `tasks-${filters?.projectId || filters?.department || 'all'}`
-    channelRef.current = supabase
+    const channelName = `tasks-rt-${currentUser?.id}-${filters?.projectId || filters?.department || 'all'}`
+    const channel = supabase
       .channel(channelName)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
-        fetchTasks()
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tasks' }, (payload) => {
+        const newTask = payload.new as Task
+        setTasks(prev => prev.find(t => t.id === newTask.id) ? prev : [newTask, ...prev])
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tasks' }, (payload) => {
+        const updatedTask = payload.new as Task
+        setTasks(prev => prev.map(t => t.id === updatedTask.id ? { ...t, ...updatedTask } : t))
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'tasks' }, (payload) => {
+        setTasks(prev => prev.filter(t => t.id !== payload.old.id))
       })
       .subscribe()
 
+    channelRef.current = channel
+
     return () => {
-      channelRef.current?.unsubscribe()
+      channel.unsubscribe()
     }
   }, [fetchTasks])
 
@@ -96,7 +106,8 @@ export function useTasks(filters?: TaskFilters) {
       .insert({
         ...data,
         created_by_id: currentUser?.id,
-        created_by_name: currentUser?.name || null, // Fix #6: store creator name
+        created_by_name: currentUser?.name || null,
+        created_by_department: currentUser?.department || null,
       })
       .select()
       .single()
@@ -110,6 +121,36 @@ export function useTasks(filters?: TaskFilters) {
         related_id: inserted.id,
         related_type: 'task',
       })
+
+      // Cross-dept: notify the assignee's team lead if assigned across departments
+      if (currentUser?.department) {
+        const { data: assigneeProfile } = await supabase
+          .from('profiles')
+          .select('id, name, department')
+          .eq('id', inserted.assignee_id)
+          .single()
+
+        if (assigneeProfile?.department && assigneeProfile.department !== currentUser.department) {
+          const { data: leadProfiles } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('department', assigneeProfile.department)
+            .eq('role', 'teamLead')
+            .eq('is_active', true)
+            .limit(1)
+
+          const leadId = leadProfiles?.[0]?.id
+          if (leadId && leadId !== currentUser.id) {
+            await supabase.from('notifications').insert({
+              user_id: leadId,
+              message: `${currentUser.name} assigned "${inserted.title}" to ${assigneeProfile.name} (cross-dept from ${currentUser.department})`,
+              type: 'assignment',
+              related_id: inserted.id,
+              related_type: 'task',
+            })
+          }
+        }
+      }
     }
 
     await supabase.from('audit_logs').insert({
@@ -120,13 +161,16 @@ export function useTasks(filters?: TaskFilters) {
       target_name: inserted.title,
     })
 
-    await fetchTasks()
+    // Real-time subscription handles the state update — no manual fetchTasks() needed
     return inserted
   }
 
   const updateTask = async (id: string, data: Partial<Task>) => {
     const { error: err } = await supabase.from('tasks').update(data).eq('id', id)
     if (err) throw err
+
+    // Optimistic local update — real-time event also syncs state shortly after
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, ...data } : t))
 
     if (data.assignee_id && data.assignee_id !== currentUser?.id) {
       await supabase.from('notifications').insert({
@@ -137,8 +181,6 @@ export function useTasks(filters?: TaskFilters) {
         related_type: 'task',
       })
     }
-
-    await fetchTasks()
   }
 
   const updateTaskStatus = async (id: string, status: TaskStatus) => {
@@ -157,7 +199,7 @@ export function useTasks(filters?: TaskFilters) {
       target_id: id,
       target_name: title,
     })
-    await fetchTasks()
+    // Real-time DELETE event handles state update
   }
 
   const bulkUpdateStatus = async (ids: string[], status: TaskStatus) => {
@@ -169,7 +211,8 @@ export function useTasks(filters?: TaskFilters) {
   const bulkDelete = async (ids: string[]) => {
     const { error: err } = await supabase.from('tasks').delete().in('id', ids)
     if (err) throw err
-    await fetchTasks()
+    // Real-time DELETE events handle state update; also apply locally for immediacy
+    setTasks(prev => prev.filter(t => !ids.includes(t.id)))
   }
 
   const bulkReassign = async (ids: string[], assigneeId: string, assigneeName?: string) => {
@@ -191,7 +234,11 @@ export function useTasks(filters?: TaskFilters) {
         })
       }
     }
-    await fetchTasks()
+    // Optimistic local update
+    setTasks(prev => prev.map(t => ids.includes(t.id)
+      ? { ...t, assignee_id: assigneeId, assignee_name: assigneeName || null }
+      : t
+    ))
   }
 
   return {
