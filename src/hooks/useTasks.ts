@@ -55,7 +55,11 @@ export function useTasks(filters?: TaskFilters) {
       const { data, error: err } = await query
       if (err) throw err
 
-      const fetchedTasks = data || []
+      const fetchedTasks = (data || []).map((task: any) => ({
+        ...task,
+        assignee: Array.isArray(task.assignee) ? (task.assignee[0] ?? null) : (task.assignee ?? null),
+        creator:  Array.isArray(task.creator)  ? (task.creator[0]  ?? null) : (task.creator  ?? null),
+      }))
 
       // Client-side overdue detection: mark tasks overdue without waiting for nightly cron
       const today = new Date()

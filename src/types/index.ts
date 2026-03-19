@@ -76,8 +76,15 @@ export interface Task {
   created_at: string
   is_overdue?: boolean
   overdue_alerted_at?: string | null
-  assignee?: Profile
-  creator?: { id: string; name: string; avatar_url: string | null; department: string | null }
+  assignee?: {
+    id: string
+    name: string
+    email: string
+    role: string
+    department: string | null
+    user_status: string
+  } | null
+  creator?: { id: string; name: string; avatar_url: string | null; department: string | null } | null
   project?: Project
 }
 
