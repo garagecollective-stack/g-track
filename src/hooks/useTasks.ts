@@ -25,7 +25,17 @@ export function useTasks(filters?: TaskFilters) {
     try {
       let query = supabase
         .from('tasks')
-        .select(`*, assignee:profiles!tasks_assignee_id_fkey(id, name, email, role, department, user_status), creator:profiles!tasks_created_by_id_fkey(id, name, avatar_url, department)`)
+        .select(`
+          id, title, description,
+          project_id, project_name,
+          department, priority, status,
+          assignee_id, assignee_name,
+          due_date,
+          created_by_id, created_by_name, created_by_department,
+          created_at, is_overdue, overdue_alerted_at,
+          assignee:profiles!tasks_assignee_id_fkey(id, name, email, role, department, user_status),
+          creator:profiles!tasks_created_by_id_fkey(id, name, avatar_url, department)
+        `)
         .order('created_at', { ascending: false })
 
       if (filters?.projectId) query = query.eq('project_id', filters.projectId)
