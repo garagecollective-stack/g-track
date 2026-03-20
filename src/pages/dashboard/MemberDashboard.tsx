@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext'
 import { useTasks } from '../../hooks/useTasks'
 import { useProjects } from '../../hooks/useProjects'
 import { useIssues } from '../../hooks/useIssues'
+import { ExpandableText } from '../../components/ExpandableText'
 import { PriorityBadge } from '../../shared/PriorityBadge'
 import { StatusBadge } from '../../shared/StatusBadge'
 import { ProgressBar } from '../../shared/ProgressBar'
@@ -154,7 +155,7 @@ export function MemberDashboard() {
                             </span>
                           )}
                           {task.description && (
-                            <p className="text-xs text-gray-400 mt-1 line-clamp-1">{task.description}</p>
+                            <ExpandableText text={task.description} maxLength={100} className="mt-1" />
                           )}
                         </div>
                         <StatusBadge status={task.status} />
