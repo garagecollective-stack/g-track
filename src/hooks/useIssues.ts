@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
-import type { Issue, IssueReply, IssuePriority } from '../types'
+import type { Issue, IssueReply, IssuePriority, Profile } from '../types'
 import { useApp } from '../context/AppContext'
 
 interface CreateIssueData {
@@ -10,6 +10,34 @@ interface CreateIssueData {
   title: string
   description: string
   priority: IssuePriority
+}
+
+// Module-level in-flight deduplication: multiple callers with the same key
+// (e.g. DashboardLayout badge + Dashboard page) share one DB round-trip.
+const inFlight = new Map<string, Promise<Issue[]>>()
+
+function buildQuery(currentUser: Profile, entityId?: string) {
+  let query = supabase
+    .from('issues')
+    .select('*')
+    .order('updated_at', { ascending: false })
+
+  if (currentUser.role === 'member') {
+    const dept = currentUser.department || ''
+    if (dept) {
+      query = query.or(`raised_by.eq.${currentUser.id},department.eq.${dept}`)
+    } else {
+      query = query.eq('raised_by', currentUser.id)
+    }
+  } else if (currentUser.role === 'teamLead') {
+    query = query.eq('department', currentUser.department || '')
+  }
+
+  if (entityId) {
+    query = query.eq('entity_id', entityId)
+  }
+
+  return query
 }
 
 export function useIssues(entityId?: string) {
@@ -23,33 +51,19 @@ export function useIssues(entityId?: string) {
     if (!currentUser) return
     setLoading(true)
     try {
-      let query = supabase
-        .from('issues')
-        .select('*')
-        .order('updated_at', { ascending: false })
-
-      // --- Role-based & department-based visibility (Fix #3 & #9) ---
-      if (currentUser.role === 'member') {
-        // Members see only issues they raised OR issues in their department
-        const dept = currentUser.department || ''
-        if (dept) {
-          query = query.or(`raised_by.eq.${currentUser.id},department.eq.${dept}`)
-        } else {
-          query = query.eq('raised_by', currentUser.id)
-        }
-      } else if (currentUser.role === 'teamLead') {
-        // Team leads see all issues in their department
-        query = query.eq('department', currentUser.department || '')
+      const cacheKey = `${currentUser.id}-${currentUser.role}-${currentUser.department || ''}-${entityId || ''}`
+      let fetchPromise = inFlight.get(cacheKey)
+      if (!fetchPromise) {
+        fetchPromise = buildQuery(currentUser, entityId)
+          .then(({ data, error: err }) => {
+            if (err) throw err
+            return (data || []) as Issue[]
+          })
+        inFlight.set(cacheKey, fetchPromise)
+        fetchPromise.finally(() => inFlight.delete(cacheKey))
       }
-      // director / super_admin: no filter — see everything
-
-      if (entityId) {
-        query = query.eq('entity_id', entityId)
-      }
-
-      const { data, error: err } = await query
-      if (err) throw err
-      setIssues(data || [])
+      const data = await fetchPromise
+      setIssues(data)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load issues')
     } finally {
@@ -63,8 +77,22 @@ export function useIssues(entityId?: string) {
     const channelName = `issues-${entityId || currentUser?.id || 'all'}`
     channelRef.current = supabase
       .channel(channelName)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'issues' }, () => fetchIssues())
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'issues' }, () => fetchIssues())
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'issues' }, (payload) => {
+        // Apply the same role-based visibility filter client-side to avoid a DB round-trip
+        const issue = payload.new as Issue
+        if (currentUser?.role === 'member') {
+          const dept = currentUser.department || ''
+          if (issue.raised_by !== currentUser.id && issue.department !== dept) return
+        } else if (currentUser?.role === 'teamLead') {
+          if (issue.department !== currentUser.department) return
+        }
+        if (entityId && issue.entity_id !== entityId) return
+        setIssues(prev => prev.find(i => i.id === issue.id) ? prev : [issue, ...prev])
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'issues' }, (payload) => {
+        // Update state locally — avoids a full DB round-trip on every UPDATE event
+        setIssues(prev => prev.map(i => i.id === payload.new.id ? { ...i, ...payload.new } as Issue : i))
+      })
       .subscribe()
 
     return () => {

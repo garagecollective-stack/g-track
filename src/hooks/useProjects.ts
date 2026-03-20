@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Project } from '../types'
 import { useApp } from '../context/AppContext'
@@ -8,7 +8,6 @@ export function useProjects() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
   const fetchProjects = useCallback(async () => {
     if (!currentUser) return
@@ -41,34 +40,11 @@ export function useProjects() {
   useEffect(() => {
     fetchProjects()
 
-    const channel = supabase
-      .channel(`projects-rt-${currentUser?.id}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'projects' }, (payload) => {
-        const newProject = payload.new as Project
-        // Only add non-archived projects (respects the same filter as fetchProjects)
-        if (newProject.is_archived) return
-        setProjects(prev => prev.find(p => p.id === newProject.id) ? prev : [newProject, ...prev])
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'projects' }, (payload) => {
-        const updated = payload.new as Project
-        if (updated.is_archived) {
-          // Archived project — remove from the list
-          setProjects(prev => prev.filter(p => p.id !== updated.id))
-        } else {
-          // Merge updated fields, preserving joined owner/members from existing state
-          setProjects(prev => prev.map(p => p.id === updated.id ? { ...p, ...updated } : p))
-        }
-      })
-      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'projects' }, (payload) => {
-        setProjects(prev => prev.filter(p => p.id !== payload.old.id))
-      })
-      .subscribe()
-
-    channelRef.current = channel
-
-    return () => {
-      channel.unsubscribe()
-    }
+    // Refetch when the tab regains focus so cross-user changes are picked up
+    // without holding a persistent realtime DB connection.
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchProjects() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
   }, [fetchProjects])
 
   const createProject = async (data: Partial<Project> & { memberIds?: string[]; files?: File[] }) => {
@@ -115,7 +91,8 @@ export function useProjects() {
       target_name: inserted.name,
     })
 
-    // Real-time INSERT event handles state update
+    // Refetch to get the full joined project (owner + members)
+    await fetchProjects()
     return inserted
   }
 
@@ -129,7 +106,7 @@ export function useProjects() {
       target_id: id,
       target_name: data.name,
     })
-    // Real-time UPDATE event handles state update
+    setProjects(prev => prev.map(p => p.id === id ? { ...p, ...data } : p))
   }
 
   const deleteProject = async (id: string, name?: string) => {
@@ -142,7 +119,7 @@ export function useProjects() {
       target_id: id,
       target_name: name,
     })
-    // Real-time DELETE event handles state update
+    setProjects(prev => prev.filter(p => p.id !== id))
   }
 
   const archiveProject = async (id: string, name?: string) => {
@@ -155,7 +132,7 @@ export function useProjects() {
       target_id: id,
       target_name: name,
     })
-    // Real-time UPDATE event (is_archived: true) removes the project from state
+    setProjects(prev => prev.filter(p => p.id !== id))
   }
 
   return { projects, loading, error, fetchProjects, createProject, updateProject, deleteProject, archiveProject }

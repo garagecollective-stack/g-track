@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import type { OverdueAlert } from '../types'
 import { useApp } from '../context/AppContext'
@@ -7,7 +7,6 @@ export function useOverdueAlerts() {
   const { currentUser } = useApp()
   const [alerts, setAlerts] = useState<OverdueAlert[]>([])
   const [loading, setLoading] = useState(true)
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
   const fetchAlerts = useCallback(async () => {
     if (!currentUser) return
@@ -29,25 +28,10 @@ export function useOverdueAlerts() {
   }, [currentUser])
 
   useEffect(() => {
-    fetchAlerts()
-
-    channelRef.current = supabase
-      .channel(`overdue-alerts-${currentUser?.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'overdue_alerts',
-          filter: `alerted_to=eq.${currentUser?.id}`,
-        },
-        () => fetchAlerts()
-      )
-      .subscribe()
-
-    return () => {
-      channelRef.current?.unsubscribe()
-    }
+    // Stagger by 3s — overdue alerts are non-critical and should not compete
+    // with tasks/issues/projects/notifications at initial page load.
+    const timer = setTimeout(fetchAlerts, 3000)
+    return () => clearTimeout(timer)
   }, [fetchAlerts, currentUser?.id])
 
   const dismissAlert = async (id: string) => {

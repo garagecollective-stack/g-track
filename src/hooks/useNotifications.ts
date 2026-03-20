@@ -66,10 +66,11 @@ export function useNotifications() {
     }
   }
 
-  // Fetch on mount and when user changes
+  // Fetch on mount and when user changes — staggered by 1.5s so it doesn't
+  // compete with critical queries (tasks, projects, issues) at page load.
   useEffect(() => {
     if (!currentUser?.id) return
-    fetchNotifications()
+    const timer = setTimeout(fetchNotifications, 1500)
 
     // Real-time: only listen for new notifications (INSERT)
     // Do NOT listen for UPDATE — it causes race conditions
@@ -90,6 +91,7 @@ export function useNotifications() {
       .subscribe()
 
     return () => {
+      clearTimeout(timer)
       channelRef.current?.unsubscribe()
     }
   }, [currentUser?.id])
