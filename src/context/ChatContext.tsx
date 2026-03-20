@@ -128,6 +128,8 @@ function stitchReplyTo(raw: ChatMessage[]): ChatMessage[] {
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   const { currentUser, addToast } = useApp()
 
+  const canUseChat = currentUser?.role !== 'director'
+
   const [rooms, setRooms] = useState<ChatRoom[]>([])
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -136,10 +138,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [sendingMessage, setSendingMessage] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
 
+  // Fix D — typing throttle
+  const lastTypingSentRef = useRef<number>(0)
+  const TYPING_THROTTLE_MS = 2500
+
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
-  const notifChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  const bgChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   const [unreadThreshold, setUnreadThreshold] = useState<string | null>(null)
+
+  // Fix A — track whether rooms have been lazy-loaded
+  const roomsFetchedRef = useRef(false)
 
   // Stable refs so async callbacks always read current values without re-subscribing
   const addToastRef       = useRef(addToast)
@@ -152,18 +161,34 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { activeRoomIdRef.current = activeRoomId }, [activeRoomId])
   useEffect(() => { roomsRef.current = rooms }, [rooms])
   useEffect(() => { currentUserRef.current = currentUser }, [currentUser])
+  // fetchRoomsRef is updated after fetchRooms is defined (see below)
 
   const activeRoom = rooms.find(r => r.id === activeRoomId) ?? null
   const totalUnread = rooms.reduce((sum, r) => sum + r.unread_count, 0)
 
   // ── Drawer ──────────────────────────────────────────────────────────────────
 
+  // Stable ref so openChat always calls the latest fetchRooms without re-creating the callback
+  const fetchRoomsRef = useRef<() => Promise<void>>(async () => {})
+
+  // Fix A — lazy load rooms only when chat is first opened
   const openChat = useCallback((roomId?: string | null) => {
+    if (!canUseChat) return
     if (roomId) setActiveRoomId(roomId)
     setIsOpen(true)
-  }, [])
+
+    if (!roomsFetchedRef.current) {
+      roomsFetchedRef.current = true
+      fetchRoomsRef.current()
+    }
+  }, [canUseChat])
 
   const closeChat = useCallback(() => setIsOpen(false), [])
+
+  // Reset lazy-load gate when user changes (logout/login)
+  useEffect(() => {
+    roomsFetchedRef.current = false
+  }, [currentUser?.id])
 
   // ── markRoomAsRead ──────────────────────────────────────────────────────────
 
@@ -289,6 +314,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     setRooms(enriched)
     setLoading(false)
   }, [currentUser?.id, currentUser?.role])
+
+  // Keep fetchRoomsRef current so openChat always calls the latest version
+  useEffect(() => { fetchRoomsRef.current = fetchRooms }, [fetchRooms])
 
   // ── fetchMessages ───────────────────────────────────────────────────────────
 
@@ -459,18 +487,24 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     if (error) setMessages(prev => prev.map(m => m.id === messageId ? msg : m))
   }, [currentUser?.id, messages])
 
-  // ── sendTyping ──────────────────────────────────────────────────────────────
+  // ── sendTyping (Fix D — throttled to 2.5s) ──────────────────────────────────
 
   const sendTyping = useCallback(async (roomId: string) => {
-    if (!currentUser?.id) return
+    if (!currentUser?.id || !roomId) return
+
+    const now = Date.now()
+    if (now - lastTypingSentRef.current < TYPING_THROTTLE_MS) return
+    lastTypingSentRef.current = now
+
     await supabase
       .from('chat_typing')
       .upsert({ room_id: roomId, user_id: currentUser.id, updated_at: new Date().toISOString() })
+
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
     typingTimeoutRef.current = setTimeout(async () => {
       await supabase.from('chat_typing').delete()
         .eq('room_id', roomId).eq('user_id', currentUser.id)
-    }, 3000)
+    }, 4000)
   }, [currentUser?.id])
 
   // ── startDM ─────────────────────────────────────────────────────────────────
@@ -527,56 +561,91 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     await fetchRooms()
   }, [fetchRooms])
 
-  // ── Global notification subscription (all rooms, for toasts + unread counts) ─
+  // ── Fix C — Background channel: ONE channel, membership-filtered client-side ─
 
   useEffect(() => {
-    if (!currentUser?.id) return
+    if (!currentUser?.id || !canUseChat) return
 
-    notifChannelRef.current = supabase
-      .channel(`chat-notif-${currentUser.id}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'chat_messages',
-      }, (payload) => {
-        const msg = payload.new as any
-        if (msg.sender_id === currentUserRef.current?.id) return
+    let roomIds: string[] = []
 
-        // If this room is actively open and visible, the per-room subscription handles it
-        if (isOpenRef.current && activeRoomIdRef.current === msg.room_id) return
+    const setupBgChannel = async () => {
+      const { data: memberships } = await supabase
+        .from('chat_room_members')
+        .select('room_id')
+        .eq('user_id', currentUser.id)
 
-        // Increment unread count for the relevant room
-        setRooms(prev => prev.map(r =>
-          r.id === msg.room_id ? { ...r, unread_count: r.unread_count + 1 } : r
-        ))
+      if (!memberships?.length) return
+      roomIds = memberships.map(m => m.room_id)
 
-        // Fire an in-app toast notification
-        const room = roomsRef.current.find(r => r.id === msg.room_id)
-        if (!room) return
-        const sender = room.members.find(m => m.id === msg.sender_id)
-        const senderName = sender?.name ?? 'Someone'
-        const displayName = room.type === 'dm' ? senderName : room.name
+      const bgChannel = supabase
+        .channel(`bg-chat-${currentUser.id}`)
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+        }, async (payload) => {
+          const newMsg = payload.new as any
 
-        addToastRef.current({
-          type: 'info',
-          title: `💬 ${displayName}`,
-          message: msg.message?.slice(0, 80) ?? 'New message',
+          // Client-side filter — only process rooms this user belongs to
+          if (!roomIds.includes(newMsg.room_id)) return
+          if (newMsg.sender_id === currentUserRef.current?.id) return
+          // If this room is actively open and visible, the per-room subscription handles it
+          if (isOpenRef.current && activeRoomIdRef.current === newMsg.room_id) return
+
+          // Update unread count in rooms state
+          setRooms(prev => prev.map(r =>
+            r.id === newMsg.room_id
+              ? { ...r, unread_count: (r.unread_count || 0) + 1 }
+              : r
+          ))
+
+          // Fetch sender info for toast
+          const { data: sender } = await supabase
+            .from('profiles')
+            .select('name')
+            .eq('id', newMsg.sender_id)
+            .single()
+
+          const room = roomsRef.current.find(r => r.id === newMsg.room_id)
+          const senderName = sender?.name ?? 'Someone'
+          const displayName = room ? (room.type === 'dm' ? senderName : room.name) : senderName
+
+          addToastRef.current({
+            type: 'info',
+            title: `💬 ${displayName}`,
+            message: (newMsg.message || '').slice(0, 80) || 'New message',
+          })
         })
-      })
-      .subscribe()
+        .subscribe()
 
-    return () => { notifChannelRef.current?.unsubscribe() }
-  }, [currentUser?.id])
+      bgChannelRef.current = bgChannel
+    }
 
-  // ── Real-time subscription ──────────────────────────────────────────────────
+    setupBgChannel()
+
+    return () => {
+      if (bgChannelRef.current) {
+        supabase.removeChannel(bgChannelRef.current)
+        bgChannelRef.current = null
+      }
+    }
+  }, [currentUser?.id, canUseChat])
+
+  // ── Fix B — Active room subscription, gated on isOpen ──────────────────────
 
   useEffect(() => {
-    if (!activeRoomId || !currentUser?.id) return
+    if (!activeRoomId || !currentUser?.id || !isOpen) return
+
+    // Tear down any previous channel before creating a new one
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current)
+      channelRef.current = null
+    }
 
     fetchMessages(activeRoomId)
 
-    channelRef.current = supabase
-      .channel(`chat-${activeRoomId}-${currentUser.id}`)
+    const channel = supabase
+      .channel(`chat-room-${activeRoomId}`)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
@@ -615,7 +684,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           ))
           return
         }
-        // Update reactions, read_by, delivered_to in-place
         setMessages(prev => prev.map(m =>
           m.id === updated.id
             ? {
@@ -642,13 +710,19 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       })
       .subscribe()
 
+    channelRef.current = channel
+
+    const readTimer = setTimeout(() => markRead(activeRoomId), 800)
+
     return () => {
-      channelRef.current?.unsubscribe()
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current)
+        channelRef.current = null
+      }
+      clearTimeout(readTimer)
       setTypingUsers([])
     }
-  }, [activeRoomId, currentUser?.id])
-
-  useEffect(() => { fetchRooms() }, [fetchRooms])
+  }, [activeRoomId, currentUser?.id, isOpen])
 
   // ── Context value ───────────────────────────────────────────────────────────
 

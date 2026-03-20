@@ -16,7 +16,24 @@ if (!supabaseUrl || !supabaseKey || supabaseUrl === 'your_project_url') {
 
 export const supabase = createClient(
   supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseKey || 'placeholder-key'
+  supabaseKey || 'placeholder-key',
+  {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: false,
+      storageKey: 'gtrack-auth',
+    },
+    realtime: {
+      params: {
+        eventsPerSecond: 3,
+      },
+      timeout: 30000,
+    },
+    db: {
+      schema: 'public',
+    },
+  }
 )
 
 export const isSupabaseConfigured =

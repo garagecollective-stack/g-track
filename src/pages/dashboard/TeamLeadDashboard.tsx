@@ -80,16 +80,16 @@ export function TeamLeadDashboard() {
   const [openIssue, setOpenIssue] = useState<Issue | null>(null)
   const [taskFilter, setTaskFilter] = useState<'all' | 'my_dept' | 'cross_dept'>('all')
 
-  // Trigger overdue check at most once per hour
+  // Trigger overdue check at most once per 6 hours
   useEffect(() => {
     const THROTTLE_KEY = 'gtrack_overdue_last_check'
-    const ONE_HOUR = 60 * 60 * 1000
+    const SIX_HOURS = 6 * 60 * 60 * 1000
     const lastRun = localStorage.getItem(THROTTLE_KEY)
     const now = Date.now()
-    if (!lastRun || now - parseInt(lastRun) > ONE_HOUR) {
-      supabase.functions.invoke('check-overdue').then(() => {
-        localStorage.setItem(THROTTLE_KEY, now.toString())
-      })
+    if (!lastRun || now - parseInt(lastRun) > SIX_HOURS) {
+      supabase.functions.invoke('check-overdue')
+        .then(() => localStorage.setItem(THROTTLE_KEY, now.toString()))
+        .catch(() => {})
     }
   }, [])
 

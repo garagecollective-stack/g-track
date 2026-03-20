@@ -1,53 +1,19 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Project } from '../types'
 import { useApp } from '../context/AppContext'
 
 export function useProjects() {
-  const { currentUser } = useApp()
-  const [projects, setProjects] = useState<Project[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const {
+    currentUser,
+    projects,
+    setProjects,
+    projectsLoading: loading,
+    projectsError: error,
+    fetchProjects,
+  } = useApp()
 
-  const fetchProjects = useCallback(async () => {
-    if (!currentUser) return
-    setLoading(true)
-    try {
-      const { data, error: err } = await supabase
-        .from('projects')
-        .select(`
-          *,
-          owner:profiles!projects_owner_id_fkey(id, name, email, role, department),
-          members:project_members(user:profiles(id, name, email, role, department))
-        `)
-        .eq('is_archived', false)
-        .order('created_at', { ascending: false })
-
-      if (err) throw err
-
-      const formatted = (data || []).map(p => ({
-        ...p,
-        members: p.members?.map((m: { user: unknown }) => m.user) || [],
-      }))
-      setProjects(formatted)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load projects')
-    } finally {
-      setLoading(false)
-    }
-  }, [currentUser])
-
-  useEffect(() => {
-    fetchProjects()
-
-    // Refetch when the tab regains focus so cross-user changes are picked up
-    // without holding a persistent realtime DB connection.
-    const onVisible = () => { if (document.visibilityState === 'visible') fetchProjects() }
-    document.addEventListener('visibilitychange', onVisible)
-    return () => document.removeEventListener('visibilitychange', onVisible)
-  }, [fetchProjects])
-
-  const createProject = async (data: Partial<Project> & { memberIds?: string[]; files?: File[] }) => {
+  const createProject = useCallback(async (data: Partial<Project> & { memberIds?: string[]; files?: File[] }) => {
     const { memberIds, files, ...projectData } = data
     const { data: inserted, error: err } = await supabase
       .from('projects')
@@ -94,9 +60,9 @@ export function useProjects() {
     // Refetch to get the full joined project (owner + members)
     await fetchProjects()
     return inserted
-  }
+  }, [currentUser, fetchProjects])
 
-  const updateProject = async (id: string, data: Partial<Project>) => {
+  const updateProject = useCallback(async (id: string, data: Partial<Project>) => {
     const { error: err } = await supabase.from('projects').update(data).eq('id', id)
     if (err) throw err
     await supabase.from('audit_logs').insert({
@@ -107,9 +73,9 @@ export function useProjects() {
       target_name: data.name,
     })
     setProjects(prev => prev.map(p => p.id === id ? { ...p, ...data } : p))
-  }
+  }, [currentUser, setProjects])
 
-  const deleteProject = async (id: string, name?: string) => {
+  const deleteProject = useCallback(async (id: string, name?: string) => {
     const { error: err } = await supabase.from('projects').delete().eq('id', id)
     if (err) throw err
     await supabase.from('audit_logs').insert({
@@ -120,9 +86,9 @@ export function useProjects() {
       target_name: name,
     })
     setProjects(prev => prev.filter(p => p.id !== id))
-  }
+  }, [currentUser, setProjects])
 
-  const archiveProject = async (id: string, name?: string) => {
+  const archiveProject = useCallback(async (id: string, name?: string) => {
     const { error: err } = await supabase.from('projects').update({ is_archived: true }).eq('id', id)
     if (err) throw err
     await supabase.from('audit_logs').insert({
@@ -133,7 +99,7 @@ export function useProjects() {
       target_name: name,
     })
     setProjects(prev => prev.filter(p => p.id !== id))
-  }
+  }, [currentUser, setProjects])
 
   return { projects, loading, error, fetchProjects, createProject, updateProject, deleteProject, archiveProject }
 }

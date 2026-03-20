@@ -92,7 +92,10 @@ export function useNotifications() {
 
     return () => {
       clearTimeout(timer)
-      channelRef.current?.unsubscribe()
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current)
+        channelRef.current = null
+      }
     }
   }, [currentUser?.id])
 

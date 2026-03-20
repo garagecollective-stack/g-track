@@ -92,7 +92,7 @@ function NavItem({ to, icon: Icon, label, badge }: {
 }
 
 export function DashboardLayout() {
-  const { currentUser, authLoading, signOut } = useApp()
+  const { currentUser, authLoading, signOut, isOnline } = useApp()
   const { issues } = useIssues()
   const navigate = useNavigate()
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -161,6 +161,15 @@ export function DashboardLayout() {
   return (
     <DashboardModalsCtx.Provider value={modalsCtx}>
     <div className="min-h-screen bg-gray-50 dark:bg-[#0B0F0C]">
+
+      {/* ── Connection status banner ── */}
+      {!isOnline && (
+        <div className="fixed top-0 left-0 right-0 z-[200] bg-amber-500 text-white text-xs font-medium py-2 flex items-center justify-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+          Connection lost — data may be outdated. Reconnecting...
+        </div>
+      )}
+
       {/* ── Desktop Navbar ── */}
       <header className="sticky top-0 z-40 h-14 bg-white dark:bg-[#000000]/90 dark:backdrop-blur-md border-b border-gray-200 dark:border-[#1F2937] hidden md:flex items-center px-6 gap-4">
         {/* Logo */}

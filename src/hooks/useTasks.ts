@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Task, TaskStatus } from '../types'
 import { useApp } from '../context/AppContext'
@@ -13,108 +13,44 @@ interface TaskFilters {
 }
 
 export function useTasks(filters?: TaskFilters) {
-  const { currentUser } = useApp()
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  const {
+    currentUser,
+    tasks: allTasks,
+    setTasks,
+    tasksLoading: loading,
+    tasksError: error,
+    fetchTasks,
+  } = useApp()
 
-  const fetchTasks = useCallback(async () => {
-    if (!currentUser) return
-    setLoading(true)
-    try {
-      let query = supabase
-        .from('tasks')
-        .select(`
-          id, title, description,
-          project_id, project_name,
-          department, priority, status,
-          assignee_id, assignee_name,
-          due_date,
-          created_by_id, created_by_name, created_by_department,
-          created_at, is_overdue, overdue_alerted_at,
-          assignee:profiles!tasks_assignee_id_fkey(id, name, email, role, department, user_status),
-          creator:profiles!tasks_created_by_id_fkey(id, name, avatar_url, department)
-        `)
-        .order('created_at', { ascending: false })
-
-      if (filters?.projectId) query = query.eq('project_id', filters.projectId)
-
-      // Fix #5: If both department AND assigneeIds are provided, use OR so that team leads
-      // can see cross-department tasks assigned to their team members
-      if (filters?.department && filters?.assigneeIds && filters.assigneeIds.length > 0) {
-        query = query.or(
-          `department.eq.${filters.department},assignee_id.in.(${filters.assigneeIds.join(',')})`
-        )
-      } else if (filters?.department) {
-        query = query.eq('department', filters.department)
-      }
-
-      if (filters?.assigneeId) query = query.eq('assignee_id', filters.assigneeId)
-
-      const { data, error: err } = await query
-      if (err) throw err
-
-      const fetchedTasks = (data || []).map((task: any) => ({
-        ...task,
-        assignee: Array.isArray(task.assignee) ? (task.assignee[0] ?? null) : (task.assignee ?? null),
-        creator:  Array.isArray(task.creator)  ? (task.creator[0]  ?? null) : (task.creator  ?? null),
-      }))
-
-      // Client-side overdue detection: mark tasks overdue without waiting for nightly cron
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const overdueIds = fetchedTasks
-        .filter(t => t.due_date && new Date(t.due_date) < today && t.status !== 'done' && !t.is_overdue)
-        .map(t => t.id)
-
-      if (overdueIds.length > 0) {
-        // Fire-and-forget — don't block rendering
-        supabase
-          .from('tasks')
-          .update({ is_overdue: true })
-          .in('id', overdueIds)
-          .then(() => {})
-      }
-
-      setTasks(fetchedTasks)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load tasks')
-    } finally {
-      setLoading(false)
-    }
+  // Apply filters client-side — AppContext holds all tasks (RLS enforces visibility)
   // Spread assigneeIds into a stable join string for the dependency array so a new
-  // array reference on every render doesn't cause infinite re-fetches (Fix #5)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser, filters?.projectId, filters?.department, filters?.assigneeId, filters?.assigneeIds?.join(',')])
+  // array reference on every render doesn't cause unnecessary recomputation (Fix #5)
+  const tasks = useMemo(() => {
+    let result = allTasks
 
-  useEffect(() => {
-    fetchTasks()
-
-    const channelName = `tasks-rt-${currentUser?.id}-${filters?.projectId || filters?.department || 'all'}`
-    const channel = supabase
-      .channel(channelName)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tasks' }, (payload) => {
-        const newTask = payload.new as Task
-        setTasks(prev => prev.find(t => t.id === newTask.id) ? prev : [newTask, ...prev])
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tasks' }, (payload) => {
-        const updatedTask = payload.new as Task
-        setTasks(prev => prev.map(t => t.id === updatedTask.id ? { ...t, ...updatedTask } : t))
-      })
-      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'tasks' }, (payload) => {
-        setTasks(prev => prev.filter(t => t.id !== payload.old.id))
-      })
-      .subscribe()
-
-    channelRef.current = channel
-
-    return () => {
-      channel.unsubscribe()
+    if (filters?.projectId) {
+      result = result.filter(t => t.project_id === filters.projectId)
     }
-  }, [fetchTasks])
 
-  const createTask = async (data: Partial<Task>) => {
+    if (filters?.department && filters?.assigneeIds && filters.assigneeIds.length > 0) {
+      // Fix #5: team leads see own-dept tasks AND cross-dept tasks assigned to their reports
+      result = result.filter(t =>
+        t.department === filters.department ||
+        filters.assigneeIds!.includes(t.assignee_id!)
+      )
+    } else if (filters?.department) {
+      result = result.filter(t => t.department === filters.department)
+    }
+
+    if (filters?.assigneeId) {
+      result = result.filter(t => t.assignee_id === filters.assigneeId)
+    }
+
+    return result
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allTasks, filters?.projectId, filters?.department, filters?.assigneeId, filters?.assigneeIds?.join(',')])
+
+  const createTask = useCallback(async (data: Partial<Task>) => {
     const { data: inserted, error: err } = await supabase
       .from('tasks')
       .insert({
@@ -175,11 +111,11 @@ export function useTasks(filters?: TaskFilters) {
       target_name: inserted.title,
     })
 
-    // Real-time subscription handles the state update — no manual fetchTasks() needed
+    // Real-time subscription in AppContext handles the state update
     return inserted
-  }
+  }, [currentUser])
 
-  const updateTask = async (id: string, data: Partial<Task>) => {
+  const updateTask = useCallback(async (id: string, data: Partial<Task>) => {
     const { error: err } = await supabase.from('tasks').update(data).eq('id', id)
     if (err) throw err
 
@@ -195,15 +131,15 @@ export function useTasks(filters?: TaskFilters) {
         related_type: 'task',
       })
     }
-  }
+  }, [currentUser, setTasks])
 
-  const updateTaskStatus = async (id: string, status: TaskStatus) => {
+  const updateTaskStatus = useCallback(async (id: string, status: TaskStatus) => {
     const { error: err } = await supabase.from('tasks').update({ status }).eq('id', id)
     if (err) throw err
     setTasks(prev => prev.map(t => t.id === id ? { ...t, status } : t))
-  }
+  }, [setTasks])
 
-  const deleteTask = async (id: string, title?: string) => {
+  const deleteTask = useCallback(async (id: string, title?: string) => {
     const { error: err } = await supabase.from('tasks').delete().eq('id', id)
     if (err) throw err
     await supabase.from('audit_logs').insert({
@@ -213,30 +149,30 @@ export function useTasks(filters?: TaskFilters) {
       target_id: id,
       target_name: title,
     })
-    // Real-time DELETE event handles state update
-  }
+    // Real-time DELETE event in AppContext handles state update
+  }, [currentUser])
 
-  const bulkUpdateStatus = async (ids: string[], status: TaskStatus) => {
+  const bulkUpdateStatus = useCallback(async (ids: string[], status: TaskStatus) => {
     const { error: err } = await supabase.from('tasks').update({ status }).in('id', ids)
     if (err) throw err
     setTasks(prev => prev.map(t => ids.includes(t.id) ? { ...t, status } : t))
-  }
+  }, [setTasks])
 
-  const bulkDelete = async (ids: string[]) => {
+  const bulkDelete = useCallback(async (ids: string[]) => {
     const { error: err } = await supabase.from('tasks').delete().in('id', ids)
     if (err) throw err
     // Real-time DELETE events handle state update; also apply locally for immediacy
     setTasks(prev => prev.filter(t => !ids.includes(t.id)))
-  }
+  }, [setTasks])
 
-  const bulkReassign = async (ids: string[], assigneeId: string, assigneeName?: string) => {
+  const bulkReassign = useCallback(async (ids: string[], assigneeId: string, assigneeName?: string) => {
     const { error: err } = await supabase
       .from('tasks')
       .update({ assignee_id: assigneeId, assignee_name: assigneeName })
       .in('id', ids)
     if (err) throw err
 
-    const tasksToReassign = tasks.filter(t => ids.includes(t.id))
+    const tasksToReassign = allTasks.filter(t => ids.includes(t.id))
     if (assigneeId !== currentUser?.id) {
       for (const task of tasksToReassign) {
         await supabase.from('notifications').insert({
@@ -253,7 +189,7 @@ export function useTasks(filters?: TaskFilters) {
       ? { ...t, assignee_id: assigneeId, assignee_name: assigneeName || null }
       : t
     ))
-  }
+  }, [currentUser, allTasks, setTasks])
 
   return {
     tasks, loading, error, fetchTasks,
