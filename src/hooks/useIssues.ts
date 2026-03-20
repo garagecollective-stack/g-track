@@ -54,7 +54,7 @@ export function useIssues(entityId?: string) {
       const cacheKey = `${currentUser.id}-${currentUser.role}-${currentUser.department || ''}-${entityId || ''}`
       let fetchPromise = inFlight.get(cacheKey)
       if (!fetchPromise) {
-        fetchPromise = buildQuery(currentUser, entityId)
+        fetchPromise = Promise.resolve(buildQuery(currentUser, entityId))
           .then(({ data, error: err }) => {
             if (err) throw err
             return (data || []) as Issue[]
