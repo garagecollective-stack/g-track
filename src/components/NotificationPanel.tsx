@@ -80,10 +80,10 @@ export function NotificationPanel() {
 
       {/* Panel */}
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-[360px] bg-white rounded-2xl shadow-xl border border-gray-200 z-50 overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-[360px] bg-white dark:bg-[#0D0D0D] rounded-2xl shadow-xl dark:shadow-[0_8px_40px_rgba(0,0,0,0.8)] border border-gray-200 dark:border-[#1F2937] z-50 overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-            <span className="font-semibold text-gray-900">Notifications</span>
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-[#1F2937]">
+            <span className="font-semibold text-gray-900 dark:text-white">Notifications</span>
             {unreadCount > 0 && (
               <button
                 type="button"
@@ -91,7 +91,7 @@ export function NotificationPanel() {
                   e.stopPropagation()
                   markAllAsRead()
                 }}
-                className="text-sm text-[#0A5540] font-medium hover:underline"
+                className="text-sm text-[#0A5540] dark:text-[#22C55E] font-medium hover:underline"
               >
                 Mark all read
               </button>
@@ -101,7 +101,7 @@ export function NotificationPanel() {
           {/* Notification list */}
           <div className="max-h-[400px] overflow-y-auto">
             {notifications.length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-gray-400">
+              <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-[#6B7280]">
                 No notifications
               </div>
             ) : (
@@ -113,8 +113,8 @@ export function NotificationPanel() {
                     flex gap-3 px-4 py-3 cursor-pointer border-l-2 transition-colors
                     ${getBorderColor(notification.type)}
                     ${notification.read
-                      ? 'bg-white hover:bg-gray-50 opacity-60'
-                      : 'bg-[#f9fffe] hover:bg-[#edf8f4]'
+                      ? 'bg-white dark:bg-[#0D0D0D] hover:bg-gray-50 dark:hover:bg-[#141414] opacity-60'
+                      : 'bg-[#f9fffe] dark:bg-[#0A5540]/10 hover:bg-[#edf8f4] dark:hover:bg-[#0A5540]/20'
                     }
                   `}
                 >
@@ -122,15 +122,15 @@ export function NotificationPanel() {
                     {getIcon(notification.type)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className={`text-sm leading-snug ${notification.read ? 'text-gray-500' : 'text-gray-800 font-medium'}`}>
+                    <p className={`text-sm leading-snug ${notification.read ? 'text-gray-500 dark:text-[#6B7280]' : 'text-gray-800 dark:text-white font-medium'}`}>
                       {notification.message}
                     </p>
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-xs text-gray-400 dark:text-[#4B5563] mt-1">
                       {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
                     </p>
                   </div>
                   {!notification.read && (
-                    <div className="w-2 h-2 rounded-full bg-[#0A5540] mt-1.5 shrink-0" />
+                    <div className="w-2 h-2 rounded-full bg-[#22C55E] dark:bg-[#22C55E] mt-1.5 shrink-0" />
                   )}
                 </div>
               ))
@@ -138,8 +138,8 @@ export function NotificationPanel() {
           </div>
 
           {/* Footer */}
-          <div className="px-4 py-2 border-t border-gray-100 text-center">
-            <span className="text-xs text-gray-400">
+          <div className="px-4 py-2 border-t border-gray-100 dark:border-[#1F2937] text-center">
+            <span className="text-xs text-gray-400 dark:text-[#6B7280]">
               {notifications.length === 0 ? 'All caught up!' : `${notifications.length} notifications`}
             </span>
           </div>

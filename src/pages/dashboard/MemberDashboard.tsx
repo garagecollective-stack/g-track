@@ -1,5 +1,8 @@
-import { useState } from 'react'
-import { CheckSquare, Zap, CheckCheck, AlertTriangle, Calendar, FolderKanban, Info, AlertCircle, Plus } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import { CheckSquare, Zap, CheckCheck, AlertTriangle, Calendar, FolderKanban, Info, AlertCircle, Plus, X } from 'lucide-react'
+import { StatCardModal } from '../../components/dashboard/StatCardModal'
+import { supabase } from '../../lib/supabase'
+import type { Task, Project } from '../../types'
 import { useApp } from '../../context/AppContext'
 import { useTasks } from '../../hooks/useTasks'
 import { useProjects } from '../../hooks/useProjects'
@@ -38,16 +41,99 @@ interface StatCardProps {
   label: string
   iconColor: string
   iconBg: string
+  onClick?: () => void
 }
 
-function StatCard({ icon: Icon, value, label, iconColor, iconBg }: StatCardProps) {
+function StatCard({ icon: Icon, value, label, iconColor, iconBg, onClick }: StatCardProps) {
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl p-4 md:p-5 shadow-sm hover:shadow-md transition-shadow">
+    <div
+      onClick={onClick}
+      className={`bg-white border border-gray-100 rounded-2xl p-4 md:p-5 shadow-sm hover:shadow-md transition-all ${onClick ? 'cursor-pointer hover:border-[#0A5540]/30' : ''}`}
+    >
       <div className={`w-9 h-9 md:w-10 md:h-10 ${iconBg} rounded-xl flex items-center justify-center mb-3`}>
         <Icon size={18} className={iconColor} />
       </div>
       <p className="text-2xl md:text-3xl font-black text-gray-900" style={{ fontFamily: 'DM Mono, monospace' }}>{value}</p>
       <p className="text-xs md:text-sm font-semibold text-gray-600 mt-0.5">{label}</p>
+    </div>
+  )
+}
+
+interface RevisionFeedback {
+  revision_number: number
+  feedback: string
+  submitted_by_name: string | null
+  created_at: string
+}
+
+function RevisionViewModal({ task, onClose, onMarkDone }: {
+  task: Task
+  onClose: () => void
+  onMarkDone: () => void
+}) {
+  const [revisions, setRevisions] = useState<RevisionFeedback[]>([])
+  const [loading, setLoading] = useState(true)
+  const [marking, setMarking] = useState(false)
+
+  useEffect(() => {
+    supabase
+      .from('task_revisions')
+      .select('revision_number, feedback, submitted_by_name, created_at')
+      .eq('task_id', task.id)
+      .order('revision_number', { ascending: false })
+      .then(({ data }) => { setRevisions(data || []); setLoading(false) })
+  }, [task.id])
+
+  const latest = revisions[0]
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
+          <div>
+            <p className="text-[11px] font-semibold text-orange-500 uppercase tracking-wide mb-0.5">Revision Requested</p>
+            <h2 className="text-base font-bold text-gray-900 leading-tight">{task.title}</h2>
+          </div>
+          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="p-5">
+          {loading ? (
+            <div className="h-20 bg-gray-100 rounded-xl animate-pulse" />
+          ) : latest ? (
+            <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-orange-700">Revision #{latest.revision_number}</span>
+                {latest.submitted_by_name && (
+                  <span className="text-[11px] text-gray-400">by {latest.submitted_by_name}</span>
+                )}
+              </div>
+              <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{latest.feedback}</p>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 text-center py-4">No revision details available.</p>
+          )}
+
+          <div className="flex gap-3 mt-5">
+            <button onClick={onClose}
+              className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+              Close
+            </button>
+            <button
+              disabled={marking}
+              onClick={async () => {
+                setMarking(true)
+                await onMarkDone()
+                setMarking(false)
+              }}
+              className="flex-1 py-2.5 text-sm font-medium text-white bg-[#0A5540] rounded-xl hover:bg-[#0d6b51] transition-colors disabled:opacity-60">
+              {marking ? 'Saving…' : '✓ Mark as Done'}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -61,8 +147,25 @@ export function MemberDashboard() {
   const navigate = useNavigate()
   const [showRaiseIssue, setShowRaiseIssue] = useState(false)
   const [openIssue, setOpenIssue] = useState<Issue | null>(null)
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const [statModal, setStatModal] = useState<{
+    open: boolean
+    type: 'projects' | 'tasks' | 'overdue' | 'completed'
+    title: string
+  } | null>(null)
 
   const myTasks    = tasks.filter(t => t.assignee_id === currentUser?.id)
+
+  const modalItems = useMemo(() => {
+    if (!statModal) return []
+    switch (statModal.type) {
+      case 'tasks': return myTasks as (Task | Project)[]
+      case 'overdue': return myTasks.filter(t => isOverdue(t.due_date) && t.status !== 'done') as (Task | Project)[]
+      case 'completed': return myTasks.filter(t => t.status === 'done') as (Task | Project)[]
+      default: return []
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statModal, myTasks])
   const inProgress = myTasks.filter(t => t.status === 'inProgress').length
   const done       = myTasks.filter(t => t.status === 'done').length
   const overdueCnt = myTasks.filter(t => isOverdue(t.due_date) && t.status !== 'done').length
@@ -98,10 +201,10 @@ export function MemberDashboard() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-5">
-        <StatCard icon={CheckSquare}   value={myTasks.length} label="My Tasks"    iconColor="text-indigo-600" iconBg="bg-indigo-50" />
-        <StatCard icon={Zap}           value={inProgress}     label="In Progress" iconColor="text-blue-600"   iconBg="bg-blue-50"   />
-        <StatCard icon={CheckCheck}    value={done}           label="Completed"   iconColor="text-[#0A5540]"  iconBg="bg-[#edf8f4]" />
-        <StatCard icon={AlertTriangle} value={overdueCnt}     label="Overdue"     iconColor={overdueCnt > 0 ? 'text-red-500' : 'text-gray-400'} iconBg={overdueCnt > 0 ? 'bg-red-50' : 'bg-gray-50'} />
+        <StatCard icon={CheckSquare}   value={myTasks.length} label="My Tasks"    iconColor="text-indigo-600" iconBg="bg-indigo-50" onClick={() => setStatModal({ open: true, type: 'tasks', title: 'My Tasks' })} />
+        <StatCard icon={Zap}           value={inProgress}     label="In Progress" iconColor="text-blue-600"   iconBg="bg-blue-50"   onClick={() => setStatModal({ open: true, type: 'tasks', title: 'In Progress Tasks' })} />
+        <StatCard icon={CheckCheck}    value={done}           label="Completed"   iconColor="text-[#0A5540]"  iconBg="bg-[#edf8f4]" onClick={() => setStatModal({ open: true, type: 'completed', title: 'Completed Tasks' })} />
+        <StatCard icon={AlertTriangle} value={overdueCnt}     label="Overdue"     iconColor={overdueCnt > 0 ? 'text-red-500' : 'text-gray-400'} iconBg={overdueCnt > 0 ? 'bg-red-50' : 'bg-gray-50'} onClick={() => setStatModal({ open: true, type: 'overdue', title: 'Overdue Tasks' })} />
       </div>
 
       {/* Urgent banner */}
@@ -140,12 +243,19 @@ export function MemberDashboard() {
                   const taskOverdue = isOverdue(task.due_date) && task.status !== 'done'
                   return (
                     <div key={task.id}
-                      className={`bg-white border rounded-xl p-4 transition-all ${
-                        taskOverdue ? 'border-red-200 bg-red-50/30' : 'border-gray-100'
+                      onClick={() => task.has_active_revision ? setSelectedTask(task) : undefined}
+                      className={`bg-white border rounded-xl p-4 transition-all ${task.has_active_revision ? 'cursor-pointer hover:shadow-sm' : ''} ${
+                        task.has_active_revision ? 'border-orange-200 bg-orange-50/30 hover:border-orange-300'
+                        : taskOverdue ? 'border-red-200 bg-red-50/30'
+                        : 'border-gray-100 hover:border-[#0A5540]/30'
                       }`}>
+                      {task.has_active_revision && (
+                        <div className="flex items-center gap-1.5 mb-2 text-xs font-semibold text-orange-600">
+                          <span>⟲</span> Revision Requested — tap to view feedback
+                        </div>
+                      )}
                       <div className="flex items-start justify-between gap-3 mb-2">
                         <div className="flex-1 min-w-0">
-                          {/* Read-only task title — no click to open modal */}
                           <p className={`text-sm font-semibold ${task.status === 'done' ? 'line-through text-gray-400' : 'text-gray-900'}`}>
                             {task.title}
                           </p>
@@ -173,20 +283,20 @@ export function MemberDashboard() {
                         <div className="flex items-center gap-2">
                           {/* Status-only actions for member */}
                           {task.status === 'backlog' && (
-                            <button onClick={() => handleStatusChange(task.id, 'inProgress')}
+                            <button onClick={e => { e.stopPropagation(); handleStatusChange(task.id, 'inProgress') }}
                               className="text-xs px-2.5 py-1 bg-[#0A5540] text-white font-medium rounded-lg hover:bg-[#0d6b51] transition-colors">
                               Start
                             </button>
                           )}
-                          {task.status === 'inProgress' && (
-                            <button onClick={() => handleStatusChange(task.id, 'done')}
+                          {task.status === 'inProgress' && !task.has_active_revision && (
+                            <button onClick={e => { e.stopPropagation(); handleStatusChange(task.id, 'done') }}
                               className="text-xs px-2.5 py-1 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 transition-colors">
                               Done
                             </button>
                           )}
                           {/* Issue button */}
                           <button
-                            onClick={() => setShowRaiseIssue(true)}
+                            onClick={e => { e.stopPropagation(); setShowRaiseIssue(true) }}
                             className="text-xs px-2 py-1 bg-amber-50 border border-amber-200 text-amber-700 rounded-lg hover:bg-amber-100 transition-colors"
                           >
                             ⚠ Issue
@@ -320,6 +430,32 @@ export function MemberDashboard() {
           onClose={() => setOpenIssue(null)}
           onUpdate={() => {}}
           readOnly={true}
+        />
+      )}
+
+      {/* Revision view modal — read-only, member can only see feedback and mark done */}
+      {selectedTask && (
+        <RevisionViewModal
+          task={selectedTask}
+          onClose={() => setSelectedTask(null)}
+          onMarkDone={async () => {
+            try {
+              await handleStatusChange(selectedTask.id, 'done')
+              setSelectedTask(null)
+            } catch { /* toast already shown */ }
+          }}
+        />
+      )}
+
+      {/* Stat card modal */}
+      {statModal && (
+        <StatCardModal
+          isOpen={statModal.open}
+          onClose={() => setStatModal(null)}
+          type={statModal.type}
+          title={statModal.title}
+          items={modalItems}
+          loading={taskLoading}
         />
       )}
     </div>

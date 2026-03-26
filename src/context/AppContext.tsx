@@ -97,7 +97,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setTasksLoading(true)
     setTasksError(null)
     try {
-      const { data, error: err } = await supabase
+      // Full query with optional feature columns (revision, multi-assignee, on-hold).
+      // Falls back to base query if the DB schema doesn't have these columns/tables yet.
+      let result = await supabase
         .from('tasks')
         .select(`
           id, title, description,
@@ -107,18 +109,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           due_date,
           created_by_id, created_by_name, created_by_department,
           created_at, is_overdue, overdue_alerted_at,
+          revision_count, has_active_revision, blocked_by_description,
           assignee:profiles!tasks_assignee_id_fkey(id, name, email, role, department, user_status),
-          creator:profiles!tasks_created_by_id_fkey(id, name, avatar_url, department)
+          creator:profiles!tasks_created_by_id_fkey(id, name, avatar_url, department),
+          assignees:task_assignees(
+            user_id,
+            profile:profiles!task_assignees_user_id_fkey(id, name, avatar_url, role, department)
+          )
         `)
         .order('created_at', { ascending: false })
         .limit(150)
 
+      // If the full query fails (e.g. feature columns not yet in DB), retry with base columns only (no joins)
+      if (result.error) {
+        result = await supabase
+          .from('tasks')
+          .select(`
+            id, title, description,
+            project_id, project_name,
+            department, priority, status,
+            assignee_id, assignee_name,
+            due_date,
+            created_by_id, created_by_name, created_by_department,
+            created_at, is_overdue, overdue_alerted_at
+          `)
+          .order('created_at', { ascending: false })
+          .limit(150) as any
+      }
+
+      const { data, error: err } = result
       if (err) throw err
 
       const fetched = (data || []).map((task: any) => ({
         ...task,
         assignee: Array.isArray(task.assignee) ? (task.assignee[0] ?? null) : (task.assignee ?? null),
         creator:  Array.isArray(task.creator)  ? (task.creator[0]  ?? null) : (task.creator  ?? null),
+        assignees: (task.assignees || []).map((a: any) => a.profile).filter(Boolean),
       }))
 
       // Client-side overdue detection: mark tasks overdue without waiting for nightly cron

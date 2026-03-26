@@ -31,7 +31,6 @@ const INITIAL_FORM = {
   project_id: '',
   priority: 'medium' as Priority,
   status: 'backlog' as TaskStatus,
-  assignee_id: '',
   due_date: '',
 }
 
@@ -43,6 +42,12 @@ export function AssignTaskModal({ open, onClose, projectId, defaultAssigneeId }:
   const [loading, setLoading] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [assignees, setAssignees] = useState<Assignee[]>([])
+  const [assigneeSearch, setAssigneeSearch] = useState('')
+
+  // Feature 8: Multi-select assignees
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>(
+    defaultAssigneeId ? [defaultAssigneeId] : []
+  )
 
   const [form, updateForm, clearForm] = usePersistedForm('assign_task', INITIAL_FORM)
 
@@ -58,18 +63,24 @@ export function AssignTaskModal({ open, onClose, projectId, defaultAssigneeId }:
       .then(({ data }) => setAssignees(data || []))
   }, [])
 
-  // When the modal opens, update project_id and assignee_id from props (but keep other fields)
+  // When the modal opens, update project_id and assignee from props (but keep other fields)
   useEffect(() => {
     if (open) {
-      updateForm({
-        project_id: projectId || '',
-        assignee_id: defaultAssigneeId || '',
-      })
+      updateForm({ project_id: projectId || '' })
+      if (defaultAssigneeId) setSelectedAssignees([defaultAssigneeId])
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, projectId, defaultAssigneeId])
 
   const set = (k: string, v: string) => updateForm({ [k]: v } as Partial<typeof INITIAL_FORM>)
+
+  const toggleAssignee = (userId: string) => {
+    setSelectedAssignees(prev =>
+      prev.includes(userId)
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    )
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -81,8 +92,10 @@ export function AssignTaskModal({ open, onClose, projectId, defaultAssigneeId }:
     setLoading(true)
     try {
       const selectedProject = projects.find(p => p.id === form.project_id)
-      const assignee = assignees.find(m => m.id === form.assignee_id)
-      await createTask({
+      const primaryAssigneeId = selectedAssignees[0] || null
+      const primaryAssignee = assignees.find(m => m.id === primaryAssigneeId)
+
+      const inserted = await createTask({
         title: form.title,
         description: form.description || null,
         project_id: form.project_id || null,
@@ -90,12 +103,41 @@ export function AssignTaskModal({ open, onClose, projectId, defaultAssigneeId }:
         department: currentUser?.department || selectedProject?.department || 'Company',
         priority: form.priority,
         status: form.status,
-        assignee_id: form.assignee_id || null,
-        assignee_name: assignee?.name || null,
+        assignee_id: primaryAssigneeId,
+        assignee_name: primaryAssignee?.name || null,
         due_date: form.due_date || null,
       })
+
+      // Feature 8: Insert all selected assignees into task_assignees table
+      if (inserted && selectedAssignees.length > 0) {
+        const rows = selectedAssignees.map(userId => ({
+          task_id: inserted.id,
+          user_id: userId,
+          assigned_by: currentUser?.id,
+        }))
+        await supabase.from('task_assignees').upsert(rows, { onConflict: 'task_id,user_id' }).then(() => {})
+
+        // Notify ALL assignees (the DB trigger covers primary; this covers additional + is the frontend backup)
+        const projectSuffix = selectedProject ? ` in ${selectedProject.name}` : ''
+        const notifRows = selectedAssignees
+          .filter(userId => userId !== currentUser?.id) // don't notify self
+          .map(userId => ({
+            user_id: userId,
+            title: 'New task assigned',
+            message: `📋 ${currentUser?.name} assigned you "${form.title}"${projectSuffix}`,
+            type: 'task',
+            related_id: inserted.id,
+            related_type: 'task',
+            read: false,
+          }))
+        if (notifRows.length > 0) {
+          await supabase.from('notifications').insert(notifRows).then(() => {})
+        }
+      }
+
       toast.success('Task created')
       clearForm()
+      setSelectedAssignees([])
       onClose()
     } catch (err) {
       toast.error(friendlyError(err))
@@ -107,10 +149,14 @@ export function AssignTaskModal({ open, onClose, projectId, defaultAssigneeId }:
   const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-[9px] text-sm text-gray-900 placeholder-gray-400 bg-white focus:outline-none focus:border-[#0A5540] focus:ring-2 focus:ring-[#0A5540]/10"
   const labelCls = "text-sm font-medium text-gray-700 block mb-1.5"
 
-  // Group assignees by department for the dropdown
-  const departments = Array.from(new Set(assignees.map(a => a.department || 'No Department')))
+  const filteredAssignees = assigneeSearch
+    ? assignees.filter(a => a.name.toLowerCase().includes(assigneeSearch.toLowerCase()))
+    : assignees
 
-  const selectedAssigneeName = assignees.find(m => m.id === form.assignee_id)?.name
+  const selectedNames = selectedAssignees
+    .map(id => assignees.find(a => a.id === id)?.name)
+    .filter(Boolean)
+    .join(', ')
 
   return (
     <>
@@ -148,28 +194,74 @@ export function AssignTaskModal({ open, onClose, projectId, defaultAssigneeId }:
                 <select value={form.status} onChange={e => set('status', e.target.value)} className={inputCls}>
                   <option value="backlog">Backlog</option>
                   <option value="inProgress">In Progress</option>
+                  <option value="onHold">⏸ On Hold</option>
                   <option value="done">Done</option>
                 </select>
               </div>
             </div>
+
+            {/* Feature 8: Multi-select assignees */}
             <div>
-              <label className={labelCls}>Assignee</label>
-              <select value={form.assignee_id} onChange={e => set('assignee_id', e.target.value)} className={inputCls}>
-                <option value="">Unassigned</option>
-                {departments.map(dept => (
-                  <optgroup key={dept} label={`── ${dept} ──`}>
-                    {assignees
-                      .filter(a => (a.department || 'No Department') === dept)
-                      .map(a => (
-                        <option key={a.id} value={a.id}>
-                          {a.name}{a.role === 'teamLead' ? ' (Lead)' : ''}
-                        </option>
-                      ))
-                    }
-                  </optgroup>
-                ))}
-              </select>
+              <label className={labelCls}>
+                Assign To
+                {selectedAssignees.length > 0 && (
+                  <span className="ml-2 text-xs font-normal text-[#0A5540]">
+                    {selectedAssignees.length} selected
+                  </span>
+                )}
+              </label>
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <div className="px-3 py-2 border-b border-gray-100 bg-gray-50">
+                  <input
+                    type="text"
+                    value={assigneeSearch}
+                    onChange={e => setAssigneeSearch(e.target.value)}
+                    placeholder="🔍 Search members..."
+                    className="w-full text-sm text-gray-900 placeholder-gray-400 bg-transparent focus:outline-none"
+                  />
+                </div>
+                <div className="max-h-48 overflow-y-auto divide-y divide-gray-50">
+                  {filteredAssignees.map(a => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => toggleAssignee(a.id)}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 transition-colors text-left ${
+                        selectedAssignees.includes(a.id) ? 'bg-[#edf8f4]' : ''
+                      }`}
+                    >
+                      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+                        selectedAssignees.includes(a.id)
+                          ? 'bg-[#0A5540] border-[#0A5540]'
+                          : 'border-gray-300'
+                      }`}>
+                        {selectedAssignees.includes(a.id) && (
+                          <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 10 10" fill="none">
+                            <path d="M1 5l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
+                      </div>
+                      <span className="flex-1 text-sm text-gray-900">{a.name}</span>
+                      <span className="text-xs text-gray-400">{a.department}</span>
+                      {a.role === 'teamLead' && (
+                        <span className="text-[10px] bg-[#0A5540]/10 text-[#0A5540] rounded-full px-1.5 py-0.5 font-medium">Lead</span>
+                      )}
+                    </button>
+                  ))}
+                  {filteredAssignees.length === 0 && (
+                    <p className="px-3 py-4 text-sm text-gray-400 text-center">No members found</p>
+                  )}
+                </div>
+                {selectedAssignees.length > 0 && (
+                  <div className="px-3 py-2 border-t border-gray-100 bg-gray-50">
+                    <p className="text-xs text-gray-500">
+                      Selected: <span className="text-gray-700 font-medium">{selectedNames}</span>
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
+
             <div>
               <label className={labelCls}>Due Date</label>
               <input type="date" value={form.due_date} onChange={e => set('due_date', e.target.value)} className={inputCls} />
@@ -194,7 +286,7 @@ export function AssignTaskModal({ open, onClose, projectId, defaultAssigneeId }:
         onClose={() => setShowConfirm(false)}
         onConfirm={handleConfirmedSubmit}
         title="Assign Task"
-        description={`Create task "${form.title}"${form.assignee_id ? ` and assign it to ${selectedAssigneeName}` : ''}?`}
+        description={`Create task "${form.title}"${selectedAssignees.length > 0 ? ` and assign to ${selectedNames}` : ''}?`}
         confirmLabel="Assign Task"
         variant="confirm"
       />

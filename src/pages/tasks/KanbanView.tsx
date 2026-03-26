@@ -21,6 +21,7 @@ interface Props {
 const COLUMNS: { id: TaskStatus; label: string; color: string }[] = [
   { id: 'backlog', label: 'Backlog', color: 'text-gray-600' },
   { id: 'inProgress', label: 'In Progress', color: 'text-blue-600' },
+  { id: 'onHold', label: '⏸ On Hold', color: 'text-slate-600' },
   { id: 'done', label: 'Done', color: 'text-green-600' },
 ]
 
@@ -94,11 +95,28 @@ export function KanbanView({ tasks, projectId, onStatusChange }: Props) {
           </button>
         )}
         {task.status === 'inProgress' && (
+          <div className="mt-2 flex gap-1">
+            <button
+              onClick={() => handleMemberStatusAction(task, 'done')}
+              className="flex-1 text-xs py-1 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 transition-colors"
+            >
+              ✓ Done
+            </button>
+            <button
+              onClick={() => handleMemberStatusAction(task, 'onHold')}
+              className="flex-1 text-xs py-1 bg-slate-100 text-slate-600 font-medium rounded-lg hover:bg-slate-200 transition-colors"
+              title="Put on hold (dependency)"
+            >
+              ⏸
+            </button>
+          </div>
+        )}
+        {task.status === 'onHold' && (
           <button
-            onClick={() => handleMemberStatusAction(task, 'done')}
-            className="mt-2 w-full text-xs py-1 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 transition-colors"
+            onClick={() => handleMemberStatusAction(task, 'inProgress')}
+            className="mt-2 w-full text-xs py-1 bg-slate-500 text-white font-medium rounded-lg hover:bg-slate-600 transition-colors"
           >
-            ✓ Done
+            Resume
           </button>
         )}
         {task.status === 'done' && (
@@ -132,7 +150,24 @@ export function KanbanView({ tasks, projectId, onStatusChange }: Props) {
               <p className="text-xs text-gray-400 mb-2">{task.project_name}</p>
             )}
             <div className="flex items-center justify-between">
-              {task.assignee_id ? (
+              {/* Feature 8: Stacked assignee avatars */}
+              {(task.assignees && task.assignees.length > 0) ? (
+                <div className="flex -space-x-2">
+                  {task.assignees.slice(0, 3).map(a => (
+                    <div key={a.id}
+                      className="w-6 h-6 rounded-full bg-[#0A5540] border-2 border-white flex items-center justify-center text-white text-[10px] font-semibold"
+                      title={a.name}
+                    >
+                      {a.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)}
+                    </div>
+                  ))}
+                  {(task.assignees.length || 0) > 3 && (
+                    <div className="w-6 h-6 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center text-gray-600 text-[10px] font-semibold">
+                      +{(task.assignees.length || 0) - 3}
+                    </div>
+                  )}
+                </div>
+              ) : task.assignee_id ? (
                 <Avatar name={task.assignee_name || '?'} size="xs" />
               ) : <div />}
               {task.due_date && (
@@ -141,6 +176,14 @@ export function KanbanView({ tasks, projectId, onStatusChange }: Props) {
                 </span>
               )}
             </div>
+            {/* Feature 5: Revision badge */}
+            {task.has_active_revision && (
+              <div className="mt-1">
+                <span className="text-[10px] bg-orange-100 text-orange-700 rounded-full px-2 py-0.5 font-medium">
+                  ↺ Revision #{task.revision_count}
+                </span>
+              </div>
+            )}
           </div>
         )}
       </Draggable>
@@ -286,8 +329,8 @@ export function KanbanView({ tasks, projectId, onStatusChange }: Props) {
         open={!!confirmAction}
         onClose={() => setConfirmAction(null)}
         onConfirm={confirmStatusChange}
-        title={`Mark as ${confirmAction?.newStatus === 'inProgress' ? 'In Progress' : 'Done'}?`}
-        description={`Mark "${confirmAction?.task.title}" as ${confirmAction?.newStatus === 'inProgress' ? 'In Progress' : 'Done'}?`}
+        title={`Mark as ${confirmAction?.newStatus === 'inProgress' ? 'In Progress' : confirmAction?.newStatus === 'onHold' ? 'On Hold' : 'Done'}?`}
+        description={`Mark "${confirmAction?.task.title}" as ${confirmAction?.newStatus === 'inProgress' ? 'In Progress' : confirmAction?.newStatus === 'onHold' ? 'On Hold' : 'Done'}?`}
         confirmLabel="Confirm"
         variant="warning"
       />

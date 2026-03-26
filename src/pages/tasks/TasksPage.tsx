@@ -28,17 +28,38 @@ export function TasksPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [priorityFilter, setPriorityFilter] = useState('')
   const [memberFilter, setMemberFilter] = useState('')
+  const [filterAssignedBy, setFilterAssignedBy] = useState<string>('all')
+
+  // Feature 2: Team Lead tab state
+  const [taskTab, setTaskTab] = useState<'team' | 'mine'>('team')
 
   const filtered = useMemo(() => tasks.filter(t => {
     if (search && !t.title.toLowerCase().includes(search.toLowerCase())) return false
     if (statusFilter && t.status !== statusFilter) return false
     if (priorityFilter && t.priority !== priorityFilter) return false
     if (memberFilter && t.assignee_id !== memberFilter) return false
+    if (filterAssignedBy !== 'all' && t.created_by_id !== filterAssignedBy) return false
     return true
-  }), [tasks, search, statusFilter, priorityFilter, memberFilter])
+  }), [tasks, search, statusFilter, priorityFilter, memberFilter, filterAssignedBy])
 
-  const active = filtered.filter(t => t.status === 'inProgress').length
-  const done = filtered.filter(t => t.status === 'done').length
+  // Feature 2: Apply team/mine tab filter for teamLeads
+  const displayedTasks = useMemo(() => {
+    if (currentUser?.role !== 'teamLead') return filtered
+    if (taskTab === 'mine') return filtered.filter(t => t.assignee_id === currentUser.id)
+    return filtered.filter(t => t.assignee_id !== currentUser.id)
+  }, [filtered, taskTab, currentUser])
+
+  // Feature 9: Unique task creators for the "Assigned By" filter
+  const uniqueCreators = useMemo(() => {
+    const seen = new Set<string>()
+    return tasks
+      .filter(t => t.creator && !seen.has(t.creator.id) && seen.add(t.creator.id))
+      .map(t => t.creator!)
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [tasks])
+
+  const active = displayedTasks.filter(t => t.status === 'inProgress').length
+  const done = displayedTasks.filter(t => t.status === 'done').length
 
   const title = currentUser?.role === 'member'
     ? 'My Tasks'
@@ -57,7 +78,7 @@ export function TasksPage() {
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-2xl font-bold text-gray-900" style={{ letterSpacing: '-0.5px' }}>{title}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{filtered.length} tasks shown</p>
+          <p className="text-sm text-gray-500 mt-0.5">{displayedTasks.length} tasks shown</p>
         </div>
         <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-lg">
           <button
@@ -77,6 +98,34 @@ export function TasksPage() {
         </div>
       </div>
 
+      {/* Feature 2: Team Lead tabs */}
+      {currentUser?.role === 'teamLead' && (
+        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit mb-4">
+          {(['team', 'mine'] as const).map(tab => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setTaskTab(tab)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                taskTab === tab
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {tab === 'team' ? '👥 Team Tasks' : '✓ My Tasks'}
+              <span className={`ml-2 text-xs rounded-full px-2 py-0.5 ${
+                taskTab === tab ? 'bg-[#0A5540] text-white' : 'bg-gray-200 text-gray-500'
+              }`}>
+                {tab === 'team'
+                  ? filtered.filter(t => t.assignee_id !== currentUser.id).length
+                  : filtered.filter(t => t.assignee_id === currentUser.id).length
+                }
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <SearchInput value={search} onChange={setSearch} placeholder="Search tasks..." className="flex-1 min-w-[160px]" />
@@ -86,6 +135,7 @@ export function TasksPage() {
             <option value="">All Status</option>
             <option value="backlog">Backlog</option>
             <option value="inProgress">In Progress</option>
+            <option value="onHold">⏸ On Hold</option>
             <option value="done">Done</option>
           </select>
           <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}
@@ -103,6 +153,21 @@ export function TasksPage() {
               {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
             </select>
           )}
+          {/* Feature 9: Assigned By filter */}
+          {currentUser?.role !== 'member' && uniqueCreators.length > 0 && (
+            <select
+              value={filterAssignedBy}
+              onChange={e => setFilterAssignedBy(e.target.value)}
+              className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none"
+            >
+              <option value="all">Assigned By: All</option>
+              {uniqueCreators.map(creator => (
+                <option key={creator.id} value={creator.id}>
+                  {creator.name}
+                </option>
+              ))}
+            </select>
+          )}
           <span className="text-sm text-gray-500 ml-1">
             <span className="text-blue-600 font-medium">{active}</span> active ·{' '}
             <span className="text-green-600 font-medium">{done}</span> done
@@ -116,7 +181,7 @@ export function TasksPage() {
           {/* Desktop table */}
           <div className="hidden md:block bg-white border border-gray-100 rounded-xl overflow-hidden">
             <TableView
-              tasks={filtered}
+              tasks={displayedTasks}
               loading={loading}
               onBulkDelete={bulkDelete}
               onBulkReassign={bulkReassign}
@@ -131,9 +196,9 @@ export function TasksPage() {
               <div className="space-y-2">
                 {[1,2,3].map(i => <div key={i} className="bg-white border border-gray-100 rounded-xl p-4 h-20 skeleton" />)}
               </div>
-            ) : filtered.length === 0 ? (
+            ) : displayedTasks.length === 0 ? (
               <div className="text-center text-sm text-gray-400 py-12">No tasks found</div>
-            ) : filtered.map(task => (
+            ) : displayedTasks.map(task => (
               <div key={task.id} className="bg-white border border-gray-100 rounded-xl p-4">
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div>
@@ -151,6 +216,7 @@ export function TasksPage() {
                     className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white text-gray-700 focus:outline-none">
                     <option value="backlog">Backlog</option>
                     <option value="inProgress">In Progress</option>
+                    <option value="onHold">⏸ On Hold</option>
                     <option value="done">Done</option>
                   </select>
                 </div>
@@ -160,7 +226,7 @@ export function TasksPage() {
         </>
       ) : (
         <KanbanView
-          tasks={filtered}
+          tasks={displayedTasks}
           onStatusChange={handleStatusChange}
         />
       )}

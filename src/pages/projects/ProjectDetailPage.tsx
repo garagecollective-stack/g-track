@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, MoreHorizontal, Calendar, User, Building2, ExternalLink, AlertCircle, Plus } from 'lucide-react'
+import { ArrowLeft, MoreHorizontal, Calendar, User, Building2, ExternalLink, AlertCircle, Plus, CheckCircle2, Circle, ListTodo } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { useProjects } from '../../hooks/useProjects'
 import { useTasks } from '../../hooks/useTasks'
 import { useIssues } from '../../hooks/useIssues'
 import { useToast } from '../../hooks/useToast'
+import { supabase } from '../../lib/supabase'
+import type { TodoItem } from '../../types'
 import { ProgressBar } from '../../shared/ProgressBar'
 import { PriorityBadge } from '../../shared/PriorityBadge'
 import { StatusBadge } from '../../shared/StatusBadge'
@@ -58,6 +60,37 @@ export function ProjectDetailPage() {
   const [showRaiseIssue, setShowRaiseIssue] = useState(false)
   const [openIssue, setOpenIssue] = useState<Issue | null>(null)
 
+  const [projectTodos, setProjectTodos] = useState<TodoItem[]>([])
+
+  useEffect(() => {
+    if (!id) return
+    const load = async () => {
+      // project_id column may not exist in DB yet — both queries will 400 if so; silently show empty
+      let { data, error } = await supabase
+        .from('personal_todos')
+        .select('*, owner:profiles!personal_todos_user_id_fkey(id, name, department)')
+        .eq('project_id', id)
+        .order('created_at', { ascending: false })
+      if (error) {
+        // Retry without FK join (FK name mismatch)
+        ;({ data, error } = await supabase
+          .from('personal_todos')
+          .select('*')
+          .eq('project_id', id)
+          .order('created_at', { ascending: false }))
+      }
+      if (!error && data) setProjectTodos(data as TodoItem[])
+      // If still error: project_id column missing from DB — show empty state
+    }
+    load()
+  }, [id])
+
+  const toggleProjectTodo = async (todo: TodoItem) => {
+    const next = todo.status === 'pending' ? 'completed' : 'pending'
+    const { error } = await supabase.from('personal_todos').update({ status: next }).eq('id', todo.id)
+    if (!error) setProjectTodos(prev => prev.map(t => t.id === todo.id ? { ...t, status: next } : t))
+  }
+
   const project = projects.find(p => p.id === id)
   const isMember = currentUser?.role === 'member'
   const canEdit = !isMember
@@ -98,6 +131,7 @@ export function ProjectDetailPage() {
     { id: 'sop', label: 'SOP' },
     { id: 'members', label: 'Members' },
     { id: 'issues', label: `Issues${issues.length > 0 ? ` (${issues.length})` : ''}` },
+    { id: 'todos', label: `Todos${projectTodos.length > 0 ? ` (${projectTodos.length})` : ''}` },
   ]
 
   if (!project) {
@@ -277,6 +311,63 @@ export function ProjectDetailPage() {
         onClose={() => setShowRaiseIssue(false)}
         presetEntity={{ type: 'project', id: project.id, name: project.name }}
       />
+
+      {tab === 'todos' && (
+        <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+          <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
+            <ListTodo size={16} className="text-[#0A5540]" />
+            <h2 className="text-base font-bold text-gray-900">Linked Todos ({projectTodos.length})</h2>
+          </div>
+          {projectTodos.length === 0 ? (
+            <div className="py-12 text-center text-gray-400">
+              <ListTodo size={36} className="mx-auto mb-3 opacity-20" />
+              <p className="text-sm">No todos linked to this project</p>
+              <p className="text-xs mt-1 text-gray-300">Link a personal todo to this project from the Todos page</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-50">
+              {projectTodos.map(todo => {
+                const overdue = todo.due_date && todo.status !== 'completed' && new Date(todo.due_date) < new Date()
+                return (
+                  <div key={todo.id} className="flex items-start gap-3 px-5 py-3.5 hover:bg-gray-50 transition-colors">
+                    <button
+                      onClick={() => toggleProjectTodo(todo)}
+                      className="mt-0.5 shrink-0 text-gray-400 hover:text-[#0A5540] transition-colors"
+                    >
+                      {todo.status === 'completed'
+                        ? <CheckCircle2 size={18} className="text-[#0A5540]" />
+                        : <Circle size={18} />}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-medium ${todo.status === 'completed' ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                        {todo.title}
+                      </p>
+                      {todo.description && (
+                        <p className="text-xs text-gray-400 mt-0.5 truncate">{todo.description}</p>
+                      )}
+                      <div className="flex items-center gap-3 mt-1">
+                        {(todo as any).owner?.name && (
+                          <span className="text-xs text-gray-400">{(todo as any).owner.name}</span>
+                        )}
+                        {todo.due_date && (
+                          <span className={`flex items-center gap-1 text-xs ${overdue ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+                            <Calendar size={11} /> {formatDate(todo.due_date)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${
+                      todo.status === 'completed' ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'
+                    }`}>
+                      {todo.status === 'completed' ? 'Done' : 'Pending'}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {openIssue && (
         <IssueDetailDrawer

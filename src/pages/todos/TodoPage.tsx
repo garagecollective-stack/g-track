@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Plus, CheckCircle2, Circle, Pencil, Trash2, Calendar, CheckSquare, ListTodo, Clock } from 'lucide-react'
+import { Plus, CheckCircle2, Circle, Pencil, Trash2, Calendar, CheckSquare, ListTodo, Clock, ChevronDown, ChevronUp, Link2, AlertTriangle } from 'lucide-react'
 import { useTodos } from '../../hooks/useTodos'
+import { useProjects } from '../../hooks/useProjects'
 import { useToast } from '../../hooks/useToast'
+import { useApp } from '../../context/AppContext'
 import { friendlyError, formatDateShort, isOverdue } from '../../utils/helpers'
+import { TodoIssueModal } from '../../modals/TodoIssueModal'
 import type { TodoItem } from '../../types'
 
 type Filter = 'all' | 'pending' | 'completed'
@@ -12,22 +15,34 @@ function TodoForm({
   initial,
   onSave,
   onCancel,
+  projects,
 }: {
   initial?: Partial<TodoItem>
-  onSave: (v: { title: string; description: string; due_date: string }) => Promise<void>
+  onSave: (v: { title: string; description: string; due_date: string; notes: string; project_id: string; project_name: string }) => Promise<void>
   onCancel: () => void
+  projects: { id: string; name: string }[]
 }) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
   const [dueDate, setDueDate] = useState(initial?.due_date ?? '')
+  const [notes, setNotes] = useState(initial?.notes ?? '')
+  const [projectId, setProjectId] = useState(initial?.project_id ?? '')
   const [saving, setSaving] = useState(false)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!title.trim()) return
     setSaving(true)
+    const selectedProject = projects.find(p => p.id === projectId)
     try {
-      await onSave({ title: title.trim(), description, due_date: dueDate })
+      await onSave({
+        title: title.trim(),
+        description,
+        due_date: dueDate,
+        notes: notes.trim(),
+        project_id: projectId,
+        project_name: selectedProject?.name ?? '',
+      })
     } finally {
       setSaving(false)
     }
@@ -63,6 +78,25 @@ function TodoForm({
             className={inputClass}
           />
         </div>
+        {projects.length > 0 && (
+          <div className="flex-1">
+            <label className="text-xs text-gray-500 mb-1 block">Link to project</label>
+            <select value={projectId} onChange={e => setProjectId(e.target.value)} className={inputClass}>
+              <option value="">No project</option>
+              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+        )}
+      </div>
+      <div>
+        <label className="text-xs text-gray-500 mb-1 block">Notes</label>
+        <textarea
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+          placeholder="Private notes for this task…"
+          rows={2}
+          className={`${inputClass} resize-none`}
+        />
       </div>
       <div className="flex justify-end gap-2 pt-1">
         <button type="button" onClick={onCancel}
@@ -83,14 +117,19 @@ function TodoCard({
   onToggle,
   onEdit,
   onDelete,
+  onRaiseIssue,
+  showRaiseIssue,
 }: {
   todo: TodoItem
   onToggle: () => void
   onEdit: () => void
   onDelete: () => void
+  onRaiseIssue?: () => void
+  showRaiseIssue?: boolean
 }) {
   const done = todo.status === 'completed'
   const overdue = !done && isOverdue(todo.due_date)
+  const [showNotes, setShowNotes] = useState(false)
 
   return (
     <div className={`bg-white border rounded-xl p-4 transition-all group ${
@@ -112,14 +151,45 @@ function TodoCard({
               {todo.description}
             </p>
           )}
-          {todo.due_date && (
-            <div className={`flex items-center gap-1 mt-1.5 text-xs ${overdue ? 'text-red-500 font-medium' : done ? 'text-gray-300' : 'text-gray-400'}`}>
-              <Calendar size={11} />
-              {overdue ? 'Overdue · ' : 'Due '}{formatDateShort(todo.due_date)}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
+            {todo.due_date && (
+              <div className={`flex items-center gap-1 text-xs ${overdue ? 'text-red-500 font-medium' : done ? 'text-gray-300' : 'text-gray-400'}`}>
+                <Calendar size={11} />
+                {overdue ? 'Overdue · ' : 'Due '}{formatDateShort(todo.due_date)}
+              </div>
+            )}
+            {todo.project_name && (
+              <div className="flex items-center gap-1 text-xs text-[#0A5540]">
+                <Link2 size={11} />
+                {todo.project_name}
+              </div>
+            )}
+          </div>
+          {todo.notes && (
+            <div className="mt-2">
+              <button
+                onClick={() => setShowNotes(v => !v)}
+                className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                {showNotes ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+                {showNotes ? 'Hide notes' : 'Show notes'}
+              </button>
+              {showNotes && (
+                <p className="mt-1 text-xs text-gray-500 bg-gray-50 rounded-lg px-2.5 py-2 whitespace-pre-wrap">
+                  {todo.notes}
+                </p>
+              )}
             </div>
           )}
         </div>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+          {showRaiseIssue && !todo.has_issue && (
+            <button onClick={onRaiseIssue}
+              className="p-1 text-amber-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+              title="Raise Issue">
+              <AlertTriangle size={13} />
+            </button>
+          )}
           <button onClick={onEdit}
             className="p-1 text-gray-400 hover:text-[#0A5540] hover:bg-[#0A5540]/5 rounded-lg transition-colors">
             <Pencil size={13} />
@@ -136,10 +206,15 @@ function TodoCard({
 
 export function TodoPage() {
   const toast = useToast()
+  const { currentUser } = useApp()
   const { todos, loading, createTodo, updateTodo, toggleTodo, deleteTodo, pending, completed } = useTodos()
+  const { projects } = useProjects()
   const [filter, setFilter] = useState<Filter>('all')
   const [showAdd, setShowAdd] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [raisingIssueFor, setRaisingIssueFor] = useState<TodoItem | null>(null)
+
+  const isTeamLead = currentUser?.role === 'teamLead'
 
   const filtered = todos.filter(t => {
     if (filter === 'pending') return t.status === 'pending'
@@ -147,9 +222,16 @@ export function TodoPage() {
     return true
   })
 
-  async function handleCreate(values: { title: string; description: string; due_date: string }) {
+  async function handleCreate(values: { title: string; description: string; due_date: string; notes: string; project_id: string; project_name: string }) {
     try {
-      await createTodo(values)
+      await createTodo({
+        title: values.title,
+        description: values.description || undefined,
+        due_date: values.due_date || undefined,
+        notes: values.notes || undefined,
+        project_id: values.project_id || undefined,
+        project_name: values.project_name || undefined,
+      })
       setShowAdd(false)
       toast.success('Task added')
     } catch (err) {
@@ -157,9 +239,16 @@ export function TodoPage() {
     }
   }
 
-  async function handleUpdate(id: string, values: { title: string; description: string; due_date: string }) {
+  async function handleUpdate(id: string, values: { title: string; description: string; due_date: string; notes: string; project_id: string; project_name: string }) {
     try {
-      await updateTodo(id, { title: values.title, description: values.description, due_date: values.due_date || undefined })
+      await updateTodo(id, {
+        title: values.title,
+        description: values.description || undefined,
+        due_date: values.due_date || undefined,
+        notes: values.notes || undefined,
+        project_id: values.project_id || null,
+        project_name: values.project_name || null,
+      })
       setEditingId(null)
       toast.success('Task updated')
     } catch (err) {
@@ -227,6 +316,7 @@ export function TodoPage() {
       {showAdd && !editingId && (
         <div className="mb-4">
           <TodoForm
+            projects={projects}
             onSave={handleCreate}
             onCancel={() => setShowAdd(false)}
           />
@@ -270,6 +360,7 @@ export function TodoPage() {
               <TodoForm
                 key={todo.id}
                 initial={todo}
+                projects={projects}
                 onSave={v => handleUpdate(todo.id, v)}
                 onCancel={() => setEditingId(null)}
               />
@@ -280,10 +371,20 @@ export function TodoPage() {
                 onToggle={() => handleToggle(todo)}
                 onEdit={() => { setEditingId(todo.id); setShowAdd(false) }}
                 onDelete={() => handleDelete(todo.id)}
+                showRaiseIssue={isTeamLead}
+                onRaiseIssue={() => setRaisingIssueFor(todo)}
               />
             )
           ))}
         </div>
+      )}
+
+      {raisingIssueFor && (
+        <TodoIssueModal
+          todo={raisingIssueFor}
+          onClose={() => setRaisingIssueFor(null)}
+          onSuccess={() => setRaisingIssueFor(null)}
+        />
       )}
     </div>
   )

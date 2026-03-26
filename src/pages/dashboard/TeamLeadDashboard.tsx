@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Folder, CheckSquare, CheckCheck, Plus, ListTodo, AlertTriangle, AlertCircle } from 'lucide-react'
+import { StatCardModal } from '../../components/dashboard/StatCardModal'
+import type { Task, Project } from '../../types'
 import { useApp } from '../../context/AppContext'
 import { useProjects } from '../../hooks/useProjects'
 import { useTasks } from '../../hooks/useTasks'
@@ -40,11 +42,15 @@ interface StatCardProps {
   iconColor: string
   iconBg: string
   pulse?: boolean
+  onClick?: () => void
 }
 
-function StatCard({ icon: Icon, value, label, iconColor, iconBg, pulse }: StatCardProps) {
+function StatCard({ icon: Icon, value, label, iconColor, iconBg, pulse, onClick }: StatCardProps) {
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+    <div
+      onClick={onClick}
+      className={`bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all ${onClick ? 'cursor-pointer hover:border-[#0A5540]/30' : ''}`}
+    >
       <div className={`w-10 h-10 ${iconBg} rounded-xl flex items-center justify-center mb-3 relative`}>
         <Icon size={20} className={iconColor} />
         {pulse && (
@@ -80,6 +86,13 @@ export function TeamLeadDashboard() {
   const [openIssue, setOpenIssue] = useState<Issue | null>(null)
   const [taskFilter, setTaskFilter] = useState<'all' | 'my_dept' | 'cross_dept'>('all')
 
+  // Stat card modal
+  const [statModal, setStatModal] = useState<{
+    open: boolean
+    type: 'projects' | 'tasks' | 'overdue' | 'completed'
+    title: string
+  } | null>(null)
+
   // Trigger overdue check at most once per 6 hours
   useEffect(() => {
     const THROTTLE_KEY = 'gtrack_overdue_last_check'
@@ -99,6 +112,21 @@ export function TeamLeadDashboard() {
   const doneTasks         = tasks.filter(t => t.status === 'done').length
   const overdueTasks      = tasks.filter(t => (t.is_overdue || isOverdue(t.due_date)) && t.status !== 'done').length
   const crossDeptTasks    = tasks.filter(t => t.department !== dept)
+
+  // Stat card modal items — placed after deptProjects/crossDeptProjects are declared
+  const modalItems = useMemo(() => {
+    if (!statModal) return []
+    const allProjects = [...deptProjects, ...crossDeptProjects]
+    switch (statModal.type) {
+      case 'projects': return allProjects as (Task | Project)[]
+      case 'tasks': return tasks as (Task | Project)[]
+      case 'overdue': return tasks.filter(t =>
+        (t.is_overdue || isOverdue(t.due_date)) && t.status !== 'done'
+      ) as (Task | Project)[]
+      case 'completed': return tasks.filter(t => t.status === 'done') as (Task | Project)[]
+      default: return []
+    }
+  }, [statModal, tasks, deptProjects, crossDeptProjects])
 
   const filteredRecentTasks = tasks
     .filter(t => {
@@ -154,8 +182,8 @@ export function TeamLeadDashboard() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5 mb-6">
-        <StatCard icon={Folder}        value={deptProjects.length + crossDeptProjects.length} label="Projects"    iconColor="text-indigo-600" iconBg="bg-indigo-50" />
-        <StatCard icon={CheckSquare}   value={tasks.length}        label="Total Tasks" iconColor="text-blue-600"   iconBg="bg-blue-50"   />
+        <StatCard icon={Folder}        value={deptProjects.length + crossDeptProjects.length} label="Projects"    iconColor="text-indigo-600" iconBg="bg-indigo-50" onClick={() => setStatModal({ open: true, type: 'projects', title: 'All Projects' })} />
+        <StatCard icon={CheckSquare}   value={tasks.length}        label="Total Tasks" iconColor="text-blue-600"   iconBg="bg-blue-50"   onClick={() => setStatModal({ open: true, type: 'tasks', title: 'All Tasks' })} />
         <StatCard
           icon={AlertTriangle}
           value={overdueTasks}
@@ -163,8 +191,9 @@ export function TeamLeadDashboard() {
           iconColor={overdueTasks > 0 ? 'text-red-600' : 'text-gray-400'}
           iconBg={overdueTasks > 0 ? 'bg-red-50' : 'bg-gray-50'}
           pulse={overdueTasks > 0}
+          onClick={() => setStatModal({ open: true, type: 'overdue', title: 'Overdue Items' })}
         />
-        <StatCard icon={CheckCheck}    value={doneTasks}           label="Completed"   iconColor="text-[#0A5540]"  iconBg="bg-[#edf8f4]" />
+        <StatCard icon={CheckCheck}    value={doneTasks}           label="Completed"   iconColor="text-[#0A5540]"  iconBg="bg-[#edf8f4]" onClick={() => setStatModal({ open: true, type: 'completed', title: 'Completed Tasks' })} />
       </div>
 
       {/* Main 2-col layout */}
@@ -394,6 +423,17 @@ export function TeamLeadDashboard() {
           issue={openIssue}
           onClose={() => setOpenIssue(null)}
           onUpdate={() => {}}
+        />
+      )}
+
+      {statModal && (
+        <StatCardModal
+          isOpen={statModal.open}
+          onClose={() => setStatModal(null)}
+          type={statModal.type}
+          title={statModal.title}
+          items={modalItems}
+          loading={taskLoading || projLoading}
         />
       )}
     </div>

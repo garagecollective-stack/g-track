@@ -4,6 +4,7 @@ import {
 } from 'react'
 import { supabase } from '../lib/supabase'
 import { useApp } from './AppContext'
+import { playNotificationSound, isSoundEnabled } from '../services/notificationSound'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -615,6 +616,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             title: `💬 ${displayName}`,
             message: (newMsg.message || '').slice(0, 80) || 'New message',
           })
+
+          // Play chat notification sound
+          if (isSoundEnabled()) {
+            playNotificationSound('chat')
+          }
         })
         .subscribe()
 

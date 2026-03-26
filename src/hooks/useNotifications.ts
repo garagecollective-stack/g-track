@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
+import { playNotificationSound, isSoundEnabled } from '../services/notificationSound'
 
 export interface Notification {
   id: string
@@ -86,6 +87,15 @@ export function useNotifications() {
         },
         (payload) => {
           setNotifications(prev => [payload.new as Notification, ...prev])
+          // Play sound based on notification type
+          if (isSoundEnabled()) {
+            const notif = payload.new as Notification
+            if (notif.type === 'issue' || notif.type === 'overdue') {
+              playNotificationSound('urgent')
+            } else {
+              playNotificationSound('default')
+            }
+          }
         }
       )
       .subscribe()

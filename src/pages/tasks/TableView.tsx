@@ -69,14 +69,94 @@ export function TableView({ tasks, loading, onBulkDelete, onBulkReassign, onBulk
   const getMemberNextStatus = (status: Task['status']): { label: string; next: Task['status'] } | null => {
     if (status === 'backlog') return { label: 'Mark In Progress', next: 'inProgress' }
     if (status === 'inProgress') return { label: 'Mark Done', next: 'done' }
+    if (status === 'onHold') return { label: 'Resume', next: 'inProgress' }
     return null
   }
 
   const statusLabel = (s: Task['status']) => {
     if (s === 'inProgress') return 'In Progress'
     if (s === 'done') return 'Done'
+    if (s === 'onHold') return 'On Hold'
     return 'Backlog'
   }
+
+  // Mobile card view
+  const MobileCardList = () => (
+    <div className="space-y-2 p-3">
+      {loading ? (
+        [1,2,3].map(i => <div key={i} className="h-20 bg-gray-100 rounded-xl animate-pulse" />)
+      ) : sorted.length === 0 ? (
+        <p className="text-center text-sm text-gray-400 py-12">No tasks found</p>
+      ) : sorted.map(task => {
+        const taskOverdue = (task.is_overdue || isOverdue(task.due_date)) && task.status !== 'done'
+        const memberNext = isMember ? getMemberNextStatus(task.status) : null
+        return (
+          <div key={task.id}
+            onClick={() => !isMember && setEditTask(task)}
+            className={`bg-white border rounded-xl p-3.5 ${!isMember ? 'cursor-pointer active:bg-gray-50' : ''} ${
+              taskOverdue ? 'border-red-200 bg-red-50/20' : 'border-gray-100'
+            }`}>
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                  <PriorityBadge priority={task.priority} />
+                  {task.has_active_revision && (
+                    <span className="text-[10px] bg-orange-100 text-orange-700 rounded-full px-2 py-0.5 font-medium">
+                      ↺ Revision
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm font-semibold text-gray-900 leading-tight">{task.title}</p>
+                {task.project_name && (
+                  <p className="text-xs text-gray-400 mt-0.5">{task.project_name}</p>
+                )}
+              </div>
+              <StatusBadge status={task.status} />
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                {task.assignee_name && (
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <Avatar name={task.assignee_name} size="xs" />
+                    <span className="text-xs text-gray-500 truncate max-w-[100px]">{task.assignee_name}</span>
+                  </div>
+                )}
+                {task.due_date && (
+                  <span className={`flex items-center gap-0.5 text-xs ${taskOverdue ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+                    {taskOverdue && <AlertTriangle size={10} />}
+                    {formatDateShort(task.due_date)}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {isMember ? (
+                  <>
+                    {task.status !== 'done' && memberNext && (
+                      <button
+                        onClick={e => { e.stopPropagation(); setPendingStatusChange({ taskId: task.id, title: task.title, status: memberNext.next }) }}
+                        className="text-xs px-2.5 py-1 bg-[#0A5540] text-white rounded-lg font-medium">
+                        {memberNext.next === 'done' ? '✓ Done' : memberNext.next === 'inProgress' ? 'Start' : 'Resume'}
+                      </button>
+                    )}
+                    <button
+                      onClick={e => { e.stopPropagation(); setIssueTask(task) }}
+                      className="text-xs px-2 py-1 bg-amber-50 border border-amber-200 text-amber-700 rounded-lg">
+                      ⚠
+                    </button>
+                  </>
+                ) : (
+                  <button onClick={e => { e.stopPropagation(); setEditTask(task) }}
+                    className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                    <Pencil size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
 
   return (
     <>
@@ -101,7 +181,13 @@ export function TableView({ tasks, loading, onBulkDelete, onBulkReassign, onBulk
         </div>
       )}
 
-      <div className="overflow-x-auto">
+      {/* Mobile: card list */}
+      <div className="md:hidden">
+        <MobileCardList />
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
@@ -153,7 +239,7 @@ export function TableView({ tasks, loading, onBulkDelete, onBulkReassign, onBulk
                     </td>
                   )}
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <StatusIcon status={task.status} />
                       {isMember ? (
                         <span className="text-sm font-medium text-gray-900">{task.title}</span>
@@ -162,6 +248,11 @@ export function TableView({ tasks, loading, onBulkDelete, onBulkReassign, onBulk
                           className="text-sm font-medium text-gray-900 hover:text-[#0A5540] transition-colors text-left">
                           {task.title}
                         </button>
+                      )}
+                      {task.has_active_revision && (
+                        <span className="text-xs bg-orange-100 text-orange-700 rounded-full px-2 py-0.5 font-medium">
+                          ↺ Revision #{task.revision_count}
+                        </span>
                       )}
                     </div>
                   </td>
@@ -239,7 +330,7 @@ export function TableView({ tasks, loading, onBulkDelete, onBulkReassign, onBulk
                           className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white text-gray-600 focus:outline-none focus:border-[#0A5540]"
                         >
                           <option value={task.status} disabled>
-                            {task.status === 'backlog' ? 'Backlog' : 'In Progress'}
+                            {task.status === 'backlog' ? 'Backlog' : task.status === 'onHold' ? 'On Hold' : 'In Progress'}
                           </option>
                           <option value={memberNext.next}>{memberNext.label}</option>
                         </select>

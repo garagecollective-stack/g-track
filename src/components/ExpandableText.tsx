@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { linkifyText } from '../utils/linkify'
 
 interface Props {
   text: string
@@ -19,7 +20,7 @@ export function ExpandableText({ text, maxLength = 100, className = '' }: Props)
   return (
     <div className={className}>
       <span className="text-sm text-gray-500 leading-relaxed whitespace-pre-wrap break-words">
-        {displayText}
+        {linkifyText(displayText)}
       </span>
       {isLong && (
         <button

@@ -8,9 +8,11 @@ import {
   LayoutDashboard, Users, CheckSquare, BarChart2, Calendar,
   Settings, Search, ChevronDown, User, LogOut,
   Home, MoreHorizontal, ListTodo, AlertCircle, Activity, MessageCircle,
+  Volume2, VolumeX, Download,
 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { useIssues } from '../hooks/useIssues'
+import { isSoundEnabled, setSoundEnabled } from '../services/notificationSound'
 import { Avatar } from '../shared/Avatar'
 import { ConfirmDialog } from '../shared/ConfirmDialog'
 import { NotificationPanel } from '../components/NotificationPanel'
@@ -75,17 +77,24 @@ function NavItem({ to, icon: Icon, label, badge }: {
       className={({ isActive }) =>
         `group flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 ${
           isActive
-            ? 'bg-[#0A5540] dark:bg-[rgba(34,197,94,0.12)] text-white dark:text-[#22C55E]'
-            : 'text-gray-500 dark:text-[#B3B3B3] hover:bg-[#0A5540] dark:hover:bg-[#141414] hover:text-white dark:hover:text-white'
+            ? 'bg-[#0A5540] dark:bg-[rgba(34,197,94,0.12)]'
+            : 'text-gray-500 dark:text-[#B3B3B3] hover:bg-[#0A5540] dark:hover:bg-[#0A5540] hover:text-white dark:hover:text-white'
         }`
       }
     >
-      <Icon size={16} className="text-inherit" />
-      <span>{label}</span>
-      {badge != null && badge > 0 && (
-        <span className="ml-0.5 px-1.5 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded-full leading-none">
-          {badge > 9 ? '9+' : badge}
-        </span>
+      {({ isActive }) => (
+        <>
+          <Icon
+            size={16}
+            className={isActive ? 'text-white dark:text-[#22C55E]' : 'text-inherit'}
+          />
+          <span className={isActive ? 'text-white dark:text-[#22C55E]' : ''}>{label}</span>
+          {badge != null && badge > 0 && (
+            <span className="ml-0.5 px-1.5 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded-full leading-none">
+              {badge > 9 ? '9+' : badge}
+            </span>
+          )}
+        </>
       )}
     </NavLink>
   )
@@ -99,6 +108,18 @@ export function DashboardLayout() {
   const [showSearch, setShowSearch] = useState(false)
   const [showMoreDrawer, setShowMoreDrawer] = useState(false)
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
+  const [soundOn, setSoundOn] = useState(isSoundEnabled())
+  const [installPrompt, setInstallPrompt] = useState<any>(null)
+
+  // Capture PWA install prompt
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault()
+      setInstallPrompt(e)
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
 
   // Global modal state — persists across in-app navigation
   const [showNewProject, setShowNewProject] = useState(false)
@@ -185,6 +206,22 @@ export function DashboardLayout() {
 
         {/* Right side */}
         <div className="flex items-center gap-2">
+          {/* Install app */}
+          {installPrompt && (
+            <button
+              onClick={async () => {
+                installPrompt.prompt()
+                const { outcome } = await installPrompt.userChoice
+                if (outcome === 'accepted') setInstallPrompt(null)
+              }}
+              className="hidden lg:flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-[#0A5540] text-white hover:bg-[#0A5540]/90 transition-colors"
+              title="Install G-Track as an app"
+            >
+              <Download size={13} />
+              Install App
+            </button>
+          )}
+
           {/* Search */}
           <button
             onClick={() => setShowSearch(true)}
@@ -197,6 +234,23 @@ export function DashboardLayout() {
 
           {/* Notification bell + panel (self-contained) */}
           <NotificationPanel />
+
+          {/* Sound toggle */}
+          <button
+            type="button"
+            onClick={() => {
+              const newVal = !soundOn
+              setSoundOn(newVal)
+              setSoundEnabled(newVal)
+            }}
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#141414] transition-colors"
+            title={soundOn ? 'Mute notifications' : 'Unmute notifications'}
+          >
+            {soundOn
+              ? <Volume2 className="w-4 h-4 text-gray-600 dark:text-[#B3B3B3]" />
+              : <VolumeX className="w-4 h-4 text-gray-400 dark:text-[#6B7280]" />
+            }
+          </button>
 
           {/* Chat icon (team lead + member only) */}
           {!isDirector && <ChatNavButton />}
@@ -266,12 +320,12 @@ export function DashboardLayout() {
       </header>
 
       {/* ── Page content ── */}
-      <main className="pb-20 md:pb-0">
+      <main className="pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
         <Outlet />
       </main>
 
       {/* ── Mobile bottom tab bar ── */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 h-16 bg-white dark:bg-[#000000] border-t border-gray-200 dark:border-[#1F2937] flex items-center justify-around px-1">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-[#000000] border-t border-gray-200 dark:border-[#1F2937] flex items-center justify-around px-1 pb-[env(safe-area-inset-bottom)]" style={{ minHeight: '4rem' }}>
         {isMember ? (
           // Member: Home, Tasks, Analytics, Calendar
           <>
@@ -282,9 +336,9 @@ export function DashboardLayout() {
               { to: '/app/calendar',  icon: Calendar,    label: 'Calendar' },
             ].map(({ to, icon: Icon, label }) => (
               <NavLink key={to} to={to} className={({ isActive }) =>
-                `flex flex-col items-center gap-0.5 px-2 py-2 rounded-lg transition-colors ${isActive ? 'text-[#0A5540]' : 'text-gray-400'}`
+                `flex flex-col items-center gap-0.5 px-2 py-2 rounded-lg transition-colors ${isActive ? 'text-[#0A5540]' : 'text-gray-400 hover:bg-[#0A5540] hover:text-white'}`
               }>
-                <Icon size={21} />
+                <Icon size={21} className="text-inherit" />
                 <span className="text-[10px] font-medium">{label}</span>
               </NavLink>
             ))}
@@ -299,9 +353,9 @@ export function DashboardLayout() {
               { to: '/app/analytics', icon: BarChart2,    label: 'Analytics'},
             ].map(({ to, icon: Icon, label, badge }) => (
               <NavLink key={to} to={to} className={({ isActive }) =>
-                `relative flex flex-col items-center gap-0.5 px-2 py-2 rounded-lg transition-colors ${isActive ? 'text-[#0A5540]' : 'text-gray-400'}`
+                `relative flex flex-col items-center gap-0.5 px-2 py-2 rounded-lg transition-colors ${isActive ? 'text-[#0A5540]' : 'text-gray-400 hover:bg-[#0A5540] hover:text-white'}`
               }>
-                <Icon size={21} />
+                <Icon size={21} className="text-inherit" />
                 {badge != null && badge > 0 && (
                   <span className="absolute -top-0.5 right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
                     {badge > 9 ? '9+' : badge}
@@ -354,6 +408,19 @@ export function DashboardLayout() {
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors">
               <Search size={18} /> Search
             </button>
+            {installPrompt && (
+              <button
+                onClick={async () => {
+                  setShowMoreDrawer(false)
+                  installPrompt.prompt()
+                  const { outcome } = await installPrompt.userChoice
+                  if (outcome === 'accepted') setInstallPrompt(null)
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[#0A5540] dark:text-[#22C55E] hover:bg-[#0A5540]/10 transition-colors font-medium"
+              >
+                <Download size={18} /> Install App
+              </button>
+            )}
             <div className="border-t border-gray-100 dark:border-[#1F2937] my-1 pt-1">
               <button onClick={() => { setShowMoreDrawer(false); setShowSignOutConfirm(true) }}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">

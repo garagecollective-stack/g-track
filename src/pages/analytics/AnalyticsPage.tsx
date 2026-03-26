@@ -34,10 +34,11 @@ export function AnalyticsPage() {
   const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0
 
   const byDept = useMemo(() => {
-    const depts: Record<string, { backlog: number; inProgress: number; done: number }> = {}
+    const depts: Record<string, { backlog: number; inProgress: number; done: number; onHold: number }> = {}
     tasks.forEach(t => {
-      if (!depts[t.department]) depts[t.department] = { backlog: 0, inProgress: 0, done: 0 }
-      depts[t.department][t.status]++
+      if (!depts[t.department]) depts[t.department] = { backlog: 0, inProgress: 0, done: 0, onHold: 0 }
+      const status = t.status as string
+      if (status in depts[t.department]) (depts[t.department] as any)[status]++
     })
     return Object.entries(depts).map(([name, counts]) => ({ name: name.length > 8 ? name.slice(0, 8) + '…' : name, ...counts }))
   }, [tasks])

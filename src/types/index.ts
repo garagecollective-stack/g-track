@@ -1,7 +1,7 @@
 export type Role = 'super_admin' | 'director' | 'teamLead' | 'member'
 export type UserStatus = 'active' | 'away' | 'offline'
 export type ProjectStatus = 'backlog' | 'inProgress' | 'completed' | 'onHold'
-export type TaskStatus = 'backlog' | 'inProgress' | 'done'
+export type TaskStatus = 'backlog' | 'inProgress' | 'done' | 'onHold'
 export type Priority = 'critical' | 'high' | 'medium' | 'low'
 export type AuditTargetType = 'user' | 'project' | 'task' | 'department'
 
@@ -86,6 +86,13 @@ export interface Task {
   } | null
   creator?: { id: string; name: string; avatar_url: string | null; department: string | null } | null
   project?: Project
+  // Feature 8: multiple assignees
+  assignees?: { id: string; name: string; avatar_url: string | null; role: string; department: string | null }[]
+  // Feature 10: on hold
+  blocked_by_description?: string | null
+  // Feature 5: revisions
+  revision_count?: number
+  has_active_revision?: boolean
 }
 
 export interface ProjectFile {
@@ -121,6 +128,13 @@ export interface TodoItem {
   status: 'pending' | 'completed'
   created_at: string
   updated_at: string
+  // Feature 3: extended todo fields
+  notes?: string | null
+  project_id?: string | null
+  project_name?: string | null
+  has_issue?: boolean
+  // Feature 4: director visibility
+  owner?: { id: string; name: string; department: string | null } | null
 }
 
 export interface ToastItem {

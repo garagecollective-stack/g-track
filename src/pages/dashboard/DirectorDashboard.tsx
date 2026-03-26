@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Folder, CheckSquare, CheckCheck, Plus, AlertCircle,
   Calendar, Users, TrendingUp, AlertTriangle,
@@ -17,10 +17,11 @@ import { IssueDetailDrawer } from '../../modals/IssueDetailDrawer'
 import { useDashboardModals } from '../../layouts/DashboardLayout'
 import { TodoWidget } from '../todos/TodoWidget'
 import { OverdueAlertBanner } from '../../components/OverdueAlertBanner'
+import { StatCardModal } from '../../components/dashboard/StatCardModal'
 import { useNavigate } from 'react-router-dom'
 import { formatDateShort, isOverdue } from '../../utils/helpers'
 import { supabase } from '../../lib/supabase'
-import type { Issue } from '../../types'
+import type { Issue, Task, Project, TodoItem } from '../../types'
 
 const PRIORITY_DOT: Record<string, string> = {
   urgent: 'bg-red-500',
@@ -44,11 +45,15 @@ interface StatCardProps {
   iconColor: string
   iconBg: string
   pulse?: boolean
+  onClick?: () => void
 }
 
-function StatCard({ icon: Icon, value, label, sub, iconColor, iconBg, pulse }: StatCardProps) {
+function StatCard({ icon: Icon, value, label, sub, iconColor, iconBg, pulse, onClick }: StatCardProps) {
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+    <div
+      onClick={onClick}
+      className={`bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all ${onClick ? 'cursor-pointer hover:border-[#0A5540]/30' : ''}`}
+    >
       <div className={`w-10 h-10 ${iconBg} rounded-xl flex items-center justify-center mb-3 relative`}>
         <Icon size={20} className={iconColor} />
         {pulse && (
@@ -72,6 +77,27 @@ export function DirectorDashboard() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [deptFilter, setDeptFilter] = useState('all')
   const [openIssue, setOpenIssue] = useState<Issue | null>(null)
+  const [teamLeadTodos, setTeamLeadTodos] = useState<(TodoItem & { owner?: { id: string; name: string; department: string | null } | null })[]>([])
+
+  // Stat card modal state
+  const [statModal, setStatModal] = useState<{
+    open: boolean
+    type: 'projects' | 'tasks' | 'overdue' | 'completed'
+    title: string
+  } | null>(null)
+
+  const modalItems = useMemo(() => {
+    if (!statModal) return []
+    switch (statModal.type) {
+      case 'projects': return projects as (Task | Project)[]
+      case 'tasks': return tasks as (Task | Project)[]
+      case 'overdue': return tasks.filter(t =>
+        (t.is_overdue || isOverdue(t.due_date)) && t.status !== 'done'
+      ) as (Task | Project)[]
+      case 'completed': return tasks.filter(t => t.status === 'done') as (Task | Project)[]
+      default: return []
+    }
+  }, [statModal, tasks, projects])
 
   // Trigger overdue check at most once per 6 hours
   useEffect(() => {
@@ -84,6 +110,35 @@ export function DirectorDashboard() {
         .then(() => localStorage.setItem(THROTTLE_KEY, now.toString()))
         .catch(() => {})
     }
+  }, [])
+
+  // Feature 4: Fetch team lead todos (visible due to updated RLS policy)
+  useEffect(() => {
+    const loadTeamLeadTodos = async () => {
+      try {
+        let result = await supabase
+          .from('personal_todos')
+          .select('*, owner:profiles!personal_todos_user_id_fkey(id, name, department, role)')
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false })
+          .limit(10)
+
+        // FK name may differ — fall back to simple select if join fails
+        if (result.error) {
+          result = await supabase
+            .from('personal_todos')
+            .select('*')
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false })
+            .limit(10)
+        }
+
+        if (result.data) setTeamLeadTodos(result.data as any)
+      } catch {
+        // ignore
+      }
+    }
+    loadTeamLeadTodos()
   }, [])
 
   const depts = [...new Set(projects.map(p => p.department))].sort()
@@ -132,8 +187,8 @@ export function DirectorDashboard() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5 mb-6">
-        <StatCard icon={Folder}        value={projects.length} label="Total Projects"  sub={`${projects.filter(p=>p.status==='inProgress').length} active`}   iconColor="text-indigo-600" iconBg="bg-indigo-50" />
-        <StatCard icon={CheckSquare}   value={tasks.length}    label="Total Tasks"     sub={`${activeTasks} in progress`}                                       iconColor="text-blue-600"   iconBg="bg-blue-50"   />
+        <StatCard icon={Folder}        value={projects.length} label="Total Projects"  sub={`${projects.filter(p=>p.status==='inProgress').length} active`}   iconColor="text-indigo-600" iconBg="bg-indigo-50"  onClick={() => setStatModal({ open: true, type: 'projects', title: 'All Projects' })} />
+        <StatCard icon={CheckSquare}   value={tasks.length}    label="Total Tasks"     sub={`${activeTasks} in progress`}                                       iconColor="text-blue-600"   iconBg="bg-blue-50"   onClick={() => setStatModal({ open: true, type: 'tasks', title: 'All Tasks' })} />
         <StatCard
           icon={AlertTriangle}
           value={overdueTasks}
@@ -142,8 +197,9 @@ export function DirectorDashboard() {
           iconColor={overdueTasks > 0 ? 'text-red-600' : 'text-gray-400'}
           iconBg={overdueTasks > 0 ? 'bg-red-50' : 'bg-gray-50'}
           pulse={overdueTasks > 0}
+          onClick={() => setStatModal({ open: true, type: 'overdue', title: 'Overdue Items' })}
         />
-        <StatCard icon={CheckCheck}    value={doneTasks}       label="Done"            sub={`${members.length} team members`}                                   iconColor="text-[#0A5540]"  iconBg="bg-[#edf8f4]" />
+        <StatCard icon={CheckCheck}    value={doneTasks}       label="Done"            sub={`${members.length} team members`}                                   iconColor="text-[#0A5540]"  iconBg="bg-[#edf8f4]" onClick={() => setStatModal({ open: true, type: 'completed', title: 'Completed Tasks' })} />
       </div>
 
       {/* Department Health */}
@@ -262,6 +318,35 @@ export function DirectorDashboard() {
           {/* Todo Widget */}
           <TodoWidget />
 
+          {/* Feature 4: Team Lead To-Dos */}
+          {teamLeadTodos.length > 0 && (
+            <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                <h3 className="text-sm font-semibold text-gray-900">Team Lead To-Dos</h3>
+                <span className="text-xs text-gray-400">{teamLeadTodos.length} pending</span>
+              </div>
+              <div className="divide-y divide-gray-50">
+                {teamLeadTodos.slice(0, 8).map(todo => (
+                  <div key={todo.id} className="px-4 py-2.5 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="w-2 h-2 rounded-full border border-gray-400 shrink-0" />
+                      <p className="text-xs font-medium text-gray-800 truncate">{todo.title}</p>
+                    </div>
+                    {(todo as any).owner && (
+                      <p className="text-[10px] text-gray-400 ml-4">{(todo as any).owner.name} · {(todo as any).owner.department}</p>
+                    )}
+                    {todo.notes && (
+                      <p className="text-[10px] text-gray-500 ml-4 mt-0.5 line-clamp-1 italic">{todo.notes}</p>
+                    )}
+                    {todo.project_name && (
+                      <p className="text-[10px] text-[#0A5540] ml-4 mt-0.5">📁 {todo.project_name}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Team Members */}
           <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
@@ -364,6 +449,18 @@ export function DirectorDashboard() {
           issue={openIssue}
           onClose={() => setOpenIssue(null)}
           onUpdate={() => {}}
+        />
+      )}
+
+      {/* Stat card modal */}
+      {statModal && (
+        <StatCardModal
+          isOpen={statModal.open}
+          onClose={() => setStatModal(null)}
+          type={statModal.type}
+          title={statModal.title}
+          items={modalItems}
+          loading={taskLoading || projLoading}
         />
       )}
     </div>
