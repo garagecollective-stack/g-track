@@ -20,7 +20,7 @@ interface Props {
   isUnread?: boolean
 }
 
-export function MessageBubble({ message, onReply, onOpenThread, threadReplyCount = 0, threadUnread = 0, showAvatar, showSenderName, isUnread }: Props) {
+export function MessageBubble({ message, onReply, onOpenThread, threadReplyCount = 0, threadUnread = 0, showSenderName, isUnread }: Props) {
   const { currentUser } = useApp()
   const { toggleReaction, deleteForMe, deleteForEveryone, togglePin } = useChat()
 

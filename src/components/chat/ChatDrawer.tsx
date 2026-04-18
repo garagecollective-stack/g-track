@@ -140,7 +140,7 @@ export function ChatDrawer() {
     messages, typingUsers, sendingMessage,
     sendMessage, sendTyping, markRead,
     startDM, loading, unreadThreshold,
-    markThreadRead, threadUnread, threadReplyCounts,
+    threadUnread, threadReplyCounts,
   } = useChat()
   const { currentUser } = useApp()
 
