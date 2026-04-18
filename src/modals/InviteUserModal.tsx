@@ -23,8 +23,8 @@ export function InviteUserModal({ open, onClose, onSuccess }: Props) {
   const [form, setForm] = useState({ name: '', email: '', department: '', role: 'member' })
 
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
-  const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-[9px] text-sm text-gray-900 focus:outline-none focus:border-[#0A5540] focus:ring-2 focus:ring-[#0A5540]/10"
-  const labelCls = "text-sm font-medium text-gray-700 block mb-1.5"
+  const inputCls = "w-full border border-[var(--line-1)] rounded-[var(--r-sm)] px-3 py-[9px] text-sm text-[var(--ink-900)] focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15"
+  const labelCls = "text-sm font-medium text-[var(--ink-700)] block mb-1.5"
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,17 +35,17 @@ export function InviteUserModal({ open, onClose, onSuccess }: Props) {
   const handleConfirmedInvite = async () => {
     setIsSubmitting(true)
     try {
-      const { error } = await supabase.auth.signUp({
-        email: form.email,
-        password: Math.random().toString(36).slice(-12) + 'Aa1!',
-        options: { data: { name: form.name, department: form.department } },
+      const { data, error } = await supabase.functions.invoke('admin-create-user', {
+        body: {
+          name: form.name,
+          email: form.email,
+          role: form.role,
+          department: form.department || null,
+          manager_id: null,
+        },
       })
       if (error) throw error
-
-      setTimeout(async () => {
-        await supabase.from('profiles').update({ role: form.role, department: form.department })
-          .eq('email', form.email)
-      }, 1000)
+      if (data?.error) throw new Error(data.error)
 
       await supabase.from('audit_logs').insert({
         performed_by: currentUser?.id,
@@ -81,23 +81,23 @@ export function InviteUserModal({ open, onClose, onSuccess }: Props) {
       <Modal open={open} onClose={handleClose} title="Invite Team Member" size="sm">
         {sent ? (
           <div className="text-center py-4">
-            <CheckCircle size={36} className="text-[#0A5540] mx-auto mb-3" />
-            <p className="text-sm font-medium text-gray-900">Invite sent!</p>
-            <p className="text-xs text-gray-500 mt-1">{sentEmail}</p>
+            <CheckCircle size={36} className="text-[var(--primary)] mx-auto mb-3" />
+            <p className="text-sm font-medium text-[var(--ink-900)]">Invite sent!</p>
+            <p className="text-xs text-[var(--ink-500)] mt-1">{sentEmail}</p>
             <button onClick={handleClose}
-              className="mt-4 px-4 py-2 text-sm font-medium text-white bg-[#0A5540] rounded-lg hover:bg-[#0d6b51] transition-colors">
+              className="mt-4 px-4 py-2 text-sm font-medium text-white bg-[var(--primary)] rounded-[var(--r-sm)] hover:bg-[var(--primary-700)] transition-colors">
               Done
             </button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className={labelCls}>Full Name</label>
-              <input type="text" value={form.name} onChange={e => set('name', e.target.value)} required className={inputCls} placeholder="Priya Shah" />
+              <label htmlFor="invite-name" className={labelCls}>Full Name</label>
+              <input id="invite-name" type="text" value={form.name} onChange={e => set('name', e.target.value)} required className={inputCls} placeholder="Priya Shah" />
             </div>
             <div>
-              <label className={labelCls}>Email</label>
-              <input type="email" value={form.email} onChange={e => set('email', e.target.value)} required className={inputCls} placeholder="priya@garagecollective.io" />
+              <label htmlFor="invite-email" className={labelCls}>Email</label>
+              <input id="invite-email" type="email" value={form.email} onChange={e => set('email', e.target.value)} required className={inputCls} placeholder="priya@garagecollective.io" />
             </div>
             <div>
               <label className={labelCls}>Department</label>
@@ -108,11 +108,11 @@ export function InviteUserModal({ open, onClose, onSuccess }: Props) {
               <RoleDropdown value={form.role as Role} onChange={v => set('role', v)} />
             </div>
             <div className="flex justify-end gap-3 pt-2">
-              <button type="button" onClick={handleClose} className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+              <button type="button" onClick={handleClose} className="px-4 py-2 text-sm font-medium text-[var(--ink-700)] border border-[var(--line-1)] rounded-[var(--r-sm)] hover:bg-[var(--surface-2)] transition-colors">
                 Cancel
               </button>
               <button type="submit" disabled={isSubmitting}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0A5540] rounded-lg hover:bg-[#0d6b51] transition-colors disabled:opacity-70">
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[var(--primary)] rounded-[var(--r-sm)] hover:bg-[var(--primary-700)] transition-colors disabled:opacity-70">
                 {isSubmitting && <LoadingSpinner size="sm" color="white" />} Send Invite
               </button>
             </div>
@@ -125,7 +125,7 @@ export function InviteUserModal({ open, onClose, onSuccess }: Props) {
         onClose={() => setShowInviteConfirm(false)}
         onConfirm={handleConfirmedInvite}
         title="Send Invite?"
-        message={`Send an invitation to ${form.email}? They will receive an email to set up their account as ${roleLabels[form.role] ?? form.role} in ${form.department || 'no department'}.`}
+        message={`Send an invitation to ${form.email}? They will receive a verification email and create their own password as ${roleLabels[form.role] ?? form.role} in ${form.department || 'no department'}.`}
         confirmLabel="Yes, Send Invite"
         variant="confirm"
         isLoading={isSubmitting}

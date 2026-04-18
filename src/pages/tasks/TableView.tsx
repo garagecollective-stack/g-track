@@ -25,9 +25,9 @@ interface Props {
 }
 
 function StatusIcon({ status }: { status: Task['status'] }) {
-  if (status === 'done') return <CheckCircle2 size={16} className="text-green-500" />
-  if (status === 'inProgress') return <CircleDot size={16} className="text-blue-500" />
-  return <Circle size={16} className="text-gray-300" />
+  if (status === 'done') return <CheckCircle2 size={14} strokeWidth={1.8} className="text-emerald-500" />
+  if (status === 'inProgress') return <CircleDot size={14} strokeWidth={1.8} className="text-[var(--primary)]" />
+  return <Circle size={14} strokeWidth={1.8} className="text-[var(--ink-400)]" />
 }
 
 export function TableView({ tasks, loading, onBulkDelete, onBulkReassign, onBulkDone, onStatusChange }: Props) {
@@ -60,7 +60,7 @@ export function TableView({ tasks, loading, onBulkDelete, onBulkReassign, onBulk
   const toggleAll = () => setSelected(s => s.length === tasks.length ? [] : tasks.map(t => t.id))
   const toggleOne = (id: string) => setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id])
 
-  const SortIcon = ({ col }: { col: SortKey }) => {
+  const renderSortIcon = (col: SortKey) => {
     if (sortKey !== col) return null
     return sortDir === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />
   }
@@ -81,34 +81,34 @@ export function TableView({ tasks, loading, onBulkDelete, onBulkReassign, onBulk
   }
 
   // Mobile card view
-  const MobileCardList = () => (
+  const renderMobileCardList = () => (
     <div className="space-y-2 p-3">
       {loading ? (
-        [1,2,3].map(i => <div key={i} className="h-20 bg-gray-100 rounded-xl animate-pulse" />)
+        [1,2,3].map(i => <div key={i} className="h-20 bg-[var(--surface-2)] rounded-[var(--r-md)] skeleton" />)
       ) : sorted.length === 0 ? (
-        <p className="text-center text-sm text-gray-400 py-12">No tasks found</p>
+        <p className="text-center text-[13px] text-[var(--ink-400)] py-12">No tasks found</p>
       ) : sorted.map(task => {
         const taskOverdue = (task.is_overdue || isOverdue(task.due_date)) && task.status !== 'done'
         const memberNext = isMember ? getMemberNextStatus(task.status) : null
         return (
           <div key={task.id}
             onClick={() => !isMember && setEditTask(task)}
-            className={`bg-white border rounded-xl p-3.5 ${!isMember ? 'cursor-pointer active:bg-gray-50' : ''} ${
-              taskOverdue ? 'border-red-200 bg-red-50/20' : 'border-gray-100'
+            className={`bg-[var(--surface-1)] border rounded-[var(--r-md)] p-3.5 shadow-[var(--shadow-xs)] ${!isMember ? 'cursor-pointer active:bg-[var(--surface-2)]' : ''} ${
+              taskOverdue ? 'border-red-200' : 'border-[var(--line-1)]'
             }`}>
             <div className="flex items-start justify-between gap-2 mb-2">
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5 mb-1">
                   <PriorityBadge priority={task.priority} />
                   {task.has_active_revision && (
-                    <span className="text-[10px] bg-orange-100 text-orange-700 rounded-full px-2 py-0.5 font-medium">
-                      ↺ Revision
+                    <span className="text-[10px] bg-orange-50 text-orange-700 ring-1 ring-inset ring-orange-200 rounded-full px-2 py-0.5 font-medium">
+                      Revision
                     </span>
                   )}
                 </div>
-                <p className="text-sm font-semibold text-gray-900 leading-tight">{task.title}</p>
+                <p className="text-[13px] font-semibold text-[var(--ink-900)] leading-tight">{task.title}</p>
                 {task.project_name && (
-                  <p className="text-xs text-gray-400 mt-0.5">{task.project_name}</p>
+                  <p className="text-[11px] text-[var(--ink-400)] mt-0.5">{task.project_name}</p>
                 )}
               </div>
               <StatusBadge status={task.status} />
@@ -118,11 +118,11 @@ export function TableView({ tasks, loading, onBulkDelete, onBulkReassign, onBulk
                 {task.assignee_name && (
                   <div className="flex items-center gap-1.5 min-w-0">
                     <Avatar name={task.assignee_name} size="xs" />
-                    <span className="text-xs text-gray-500 truncate max-w-[100px]">{task.assignee_name}</span>
+                    <span className="text-[11px] text-[var(--ink-500)] truncate max-w-[100px]">{task.assignee_name}</span>
                   </div>
                 )}
                 {task.due_date && (
-                  <span className={`flex items-center gap-0.5 text-xs ${taskOverdue ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+                  <span className={`flex items-center gap-0.5 text-[11px] font-mono tabular-nums ${taskOverdue ? 'text-red-500 font-medium' : 'text-[var(--ink-400)]'}`}>
                     {taskOverdue && <AlertTriangle size={10} />}
                     {formatDateShort(task.due_date)}
                   </span>
@@ -134,20 +134,24 @@ export function TableView({ tasks, loading, onBulkDelete, onBulkReassign, onBulk
                     {task.status !== 'done' && memberNext && (
                       <button
                         onClick={e => { e.stopPropagation(); setPendingStatusChange({ taskId: task.id, title: task.title, status: memberNext.next }) }}
-                        className="text-xs px-2.5 py-1 bg-[#0A5540] text-white rounded-lg font-medium">
-                        {memberNext.next === 'done' ? '✓ Done' : memberNext.next === 'inProgress' ? 'Start' : 'Resume'}
+                        className="text-[11px] px-2.5 py-1 bg-[var(--primary)] text-white rounded-[var(--r-sm)] font-medium hover:bg-[var(--primary-hi)] shadow-[var(--shadow-xs)] transition-colors">
+                        {memberNext.next === 'done' ? 'Done' : memberNext.next === 'inProgress' ? 'Start' : 'Resume'}
                       </button>
                     )}
                     <button
                       onClick={e => { e.stopPropagation(); setIssueTask(task) }}
-                      className="text-xs px-2 py-1 bg-amber-50 border border-amber-200 text-amber-700 rounded-lg">
-                      ⚠
+                      className="text-[11px] px-2 py-1 bg-amber-50 border border-amber-200 text-amber-700 rounded-[var(--r-sm)] hover:bg-amber-100 transition-colors"
+                      aria-label="Raise issue"
+                    >
+                      <AlertTriangle size={12} strokeWidth={1.8} />
                     </button>
                   </>
                 ) : (
                   <button onClick={e => { e.stopPropagation(); setEditTask(task) }}
-                    className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-                    <Pencil size={14} />
+                    className="p-1.5 text-[var(--ink-400)] hover:text-[var(--ink-900)] hover:bg-[var(--surface-2)] rounded-[var(--r-sm)] transition-colors"
+                    aria-label="Edit task"
+                  >
+                    <Pencil size={13} strokeWidth={1.8} />
                   </button>
                 )}
               </div>
@@ -160,21 +164,23 @@ export function TableView({ tasks, loading, onBulkDelete, onBulkReassign, onBulk
 
   return (
     <>
-      {/* Bulk action bar — hidden for members */}
+      {/* Bulk action bar */}
       {selected.length > 0 && canBulkAction && (
-        <div className="bg-[#edf8f4] border-b border-[#0A5540]/20 px-4 py-2.5 flex items-center gap-4">
-          <span className="text-sm font-medium text-gray-700">{selected.length} task{selected.length !== 1 ? 's' : ''} selected</span>
+        <div className="bg-[var(--primary-50)] border-b border-[var(--primary-200)] px-4 py-2.5 flex items-center gap-4 animate-fade-scale-in">
+          <span className="text-[13px] font-medium text-[var(--primary-700)]">
+            <span className="font-mono tabular-nums font-semibold">{selected.length}</span> task{selected.length !== 1 ? 's' : ''} selected
+          </span>
           <div className="flex items-center gap-2 ml-auto">
             <button onClick={() => setShowBulkDone(true)}
-              className="px-3 py-1.5 text-xs font-medium text-[#0A5540] bg-white border border-[#0A5540]/30 rounded-lg hover:bg-[#edf8f4] transition-colors">
+              className="px-3 py-1.5 text-[12px] font-medium text-[var(--primary)] bg-[var(--surface-1)] border border-[var(--primary-200)] rounded-[var(--r-sm)] hover:bg-[var(--primary-50)] transition-colors">
               Mark Done
             </button>
             <button onClick={() => setShowBulkReassign(true)}
-              className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+              className="px-3 py-1.5 text-[12px] font-medium text-[var(--ink-700)] bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-sm)] hover:bg-[var(--surface-2)] transition-colors">
               Reassign
             </button>
             <button onClick={() => setShowBulkDelete(true)}
-              className="px-3 py-1.5 text-xs font-medium text-red-500 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-1">
+              className="px-3 py-1.5 text-[12px] font-medium text-red-500 bg-[var(--surface-1)] border border-red-200 rounded-[var(--r-sm)] hover:bg-red-50 transition-colors">
               Delete
             </button>
           </div>
@@ -183,39 +189,39 @@ export function TableView({ tasks, loading, onBulkDelete, onBulkReassign, onBulk
 
       {/* Mobile: card list */}
       <div className="md:hidden">
-        <MobileCardList />
+        {renderMobileCardList()}
       </div>
 
       {/* Desktop: table */}
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
+            <tr className="bg-[var(--surface-2)] border-b border-[var(--line-1)]">
               {canBulkAction && (
                 <th className="w-10 px-4 py-2.5">
                   <input type="checkbox" checked={selected.length === tasks.length && tasks.length > 0}
-                    onChange={toggleAll} className="accent-[#0A5540]" />
+                    onChange={toggleAll} className="accent-[var(--primary)]" />
                 </th>
               )}
               <th className="px-4 py-2.5 text-left">
                 <button onClick={() => toggleSort('title')}
-                  className="flex items-center gap-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-700">
-                  Task <SortIcon col="title" />
+                  className="flex items-center gap-1 eyebrow hover:text-[var(--ink-900)] transition-colors">
+                  Task {renderSortIcon('title')}
                 </button>
               </th>
-              <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Project</th>
-              <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Assignee</th>
+              <th className="px-4 py-2.5 text-left eyebrow">Project</th>
+              <th className="px-4 py-2.5 text-left eyebrow">Assignee</th>
               {(currentUser?.role === 'director' || currentUser?.role === 'teamLead') && (
-                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Assigned By</th>
+                <th className="px-4 py-2.5 text-left eyebrow">Assigned By</th>
               )}
-              <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Priority</th>
+              <th className="px-4 py-2.5 text-left eyebrow">Priority</th>
               <th className="px-4 py-2.5 text-left">
                 <button onClick={() => toggleSort('due_date')}
-                  className="flex items-center gap-1 text-[11px] font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-700">
-                  Due Date <SortIcon col="due_date" />
+                  className="flex items-center gap-1 eyebrow hover:text-[var(--ink-900)] transition-colors">
+                  Due Date {renderSortIcon('due_date')}
                 </button>
               </th>
-              <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+              <th className="px-4 py-2.5 text-left eyebrow">Status</th>
               <th className="w-10 px-4 py-2.5" />
             </tr>
           </thead>
@@ -224,7 +230,7 @@ export function TableView({ tasks, loading, onBulkDelete, onBulkReassign, onBulk
               <SkeletonRow count={8} />
             ) : sorted.length === 0 ? (
               <tr>
-                <td colSpan={(currentUser?.role === 'director' || currentUser?.role === 'teamLead') ? 9 : 8} className="py-16 text-center text-sm text-gray-400">No tasks found</td>
+                <td colSpan={(currentUser?.role === 'director' || currentUser?.role === 'teamLead') ? 9 : 8} className="py-16 text-center text-[13px] text-[var(--ink-400)]">No tasks found</td>
               </tr>
             ) : sorted.map(task => {
               const taskOverdue = (task.is_overdue || isOverdue(task.due_date)) && task.status !== 'done'
@@ -232,33 +238,33 @@ export function TableView({ tasks, loading, onBulkDelete, onBulkReassign, onBulk
 
               return (
                 <tr key={task.id}
-                  className={`border-b border-gray-100 hover:bg-gray-50 transition-colors group ${taskOverdue ? 'bg-red-50/40' : ''}`}>
+                  className={`border-b border-[var(--line-1)] hover:bg-[var(--surface-2)]/60 transition-colors group ${taskOverdue ? 'bg-red-50/30 dark:bg-red-950/20' : ''}`}>
                   {canBulkAction && (
                     <td className="px-4 py-3">
-                      <input type="checkbox" checked={selected.includes(task.id)} onChange={() => toggleOne(task.id)} className="accent-[#0A5540]" />
+                      <input type="checkbox" checked={selected.includes(task.id)} onChange={() => toggleOne(task.id)} className="accent-[var(--primary)]" />
                     </td>
                   )}
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2 flex-wrap">
                       <StatusIcon status={task.status} />
                       {isMember ? (
-                        <span className="text-sm font-medium text-gray-900">{task.title}</span>
+                        <span className="text-[13px] font-medium text-[var(--ink-900)]">{task.title}</span>
                       ) : (
                         <button onClick={() => setEditTask(task)}
-                          className="text-sm font-medium text-gray-900 hover:text-[#0A5540] transition-colors text-left">
+                          className="text-[13px] font-medium text-[var(--ink-900)] hover:text-[var(--primary)] transition-colors text-left">
                           {task.title}
                         </button>
                       )}
                       {task.has_active_revision && (
-                        <span className="text-xs bg-orange-100 text-orange-700 rounded-full px-2 py-0.5 font-medium">
-                          ↺ Revision #{task.revision_count}
+                        <span className="text-[10px] bg-orange-50 text-orange-700 ring-1 ring-inset ring-orange-200 rounded-full px-2 py-0.5 font-medium">
+                          Revision #{task.revision_count}
                         </span>
                       )}
                     </div>
                   </td>
                   <td className="px-4 py-3">
                     {task.project_name && (
-                      <span className="text-xs bg-gray-100 text-gray-600 rounded-md px-2 py-0.5">
+                      <span className="text-[11px] bg-[var(--surface-2)] text-[var(--ink-500)] ring-1 ring-inset ring-[var(--line-1)] rounded-[var(--r-xs)] px-2 py-0.5">
                         {task.project_name}
                       </span>
                     )}
@@ -268,18 +274,17 @@ export function TableView({ tasks, loading, onBulkDelete, onBulkReassign, onBulk
                       {task.assignee_id ? (
                         <div className="flex items-center gap-2">
                           <Avatar name={task.assignee_name || '?'} size="xs" />
-                          <span className="text-sm text-gray-600">{task.assignee_name}</span>
+                          <span className="text-[13px] text-[var(--ink-500)]">{task.assignee_name}</span>
                         </div>
                       ) : (
-                        <span className="text-sm text-gray-400">—</span>
+                        <span className="text-[13px] text-[var(--ink-400)]">—</span>
                       )}
-                      {/* Cross-dept badge for team leads */}
                       {currentUser?.role === 'teamLead' && task.department && task.department !== currentUser.department && (
                         <span
-                          className="text-[10px] bg-purple-100 text-purple-700 rounded-full px-1.5 py-0.5 font-medium w-fit"
+                          className="text-[10px] bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-200 rounded-full px-1.5 py-0.5 font-medium w-fit"
                           title={`Assigned from ${task.department} department`}
                         >
-                          ↔ {task.department}
+                          {task.department}
                         </span>
                       )}
                     </div>
@@ -288,15 +293,15 @@ export function TableView({ tasks, loading, onBulkDelete, onBulkReassign, onBulk
                     <td className="px-4 py-3">
                       {task.creator ? (
                         task.creator.name === task.assignee_name ? (
-                          <em className="text-xs text-gray-400">Self-assigned</em>
+                          <em className="text-[11px] text-[var(--ink-400)]">Self-assigned</em>
                         ) : (
                           <div className="flex flex-col gap-0.5">
                             <div className="flex items-center gap-2">
                               <Avatar name={task.creator.name} size="xs" />
-                              <span className="text-sm text-gray-600">{task.creator.name}</span>
+                              <span className="text-[13px] text-[var(--ink-500)]">{task.creator.name}</span>
                             </div>
                             {currentUser?.role === 'teamLead' && task.creator.department && task.creator.department !== currentUser.department && (
-                              <span className="text-[10px] bg-purple-100 text-purple-700 rounded-full px-1.5 py-0.5 font-medium w-fit">
+                              <span className="text-[10px] bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-200 rounded-full px-1.5 py-0.5 font-medium w-fit">
                                 {task.creator.department}
                               </span>
                             )}
@@ -305,17 +310,17 @@ export function TableView({ tasks, loading, onBulkDelete, onBulkReassign, onBulk
                       ) : task.created_by_name ? (
                         <div className="flex items-center gap-2">
                           <Avatar name={task.created_by_name} size="xs" />
-                          <span className="text-sm text-gray-600">{task.created_by_name}</span>
+                          <span className="text-[13px] text-[var(--ink-500)]">{task.created_by_name}</span>
                         </div>
                       ) : (
-                        <span className="text-sm text-gray-300">—</span>
+                        <span className="text-[13px] text-[var(--ink-400)]">—</span>
                       )}
                     </td>
                   )}
                   <td className="px-4 py-3"><PriorityBadge priority={task.priority} /></td>
                   <td className="px-4 py-3">
-                    <span className={`text-sm flex items-center gap-1 ${taskOverdue ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
-                      {taskOverdue && <AlertTriangle size={12} />}
+                    <span className={`text-[13px] flex items-center gap-1 font-mono tabular-nums ${taskOverdue ? 'text-red-500 font-medium' : 'text-[var(--ink-500)]'}`}>
+                      {taskOverdue && <AlertTriangle size={11} />}
                       {task.due_date ? formatDateShort(task.due_date) : '—'}
                     </span>
                   </td>
@@ -327,7 +332,7 @@ export function TableView({ tasks, loading, onBulkDelete, onBulkReassign, onBulk
                         <select
                           value={task.status}
                           onChange={e => setPendingStatusChange({ taskId: task.id, title: task.title, status: e.target.value as Task['status'] })}
-                          className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white text-gray-600 focus:outline-none focus:border-[#0A5540]"
+                          className="text-[11px] border border-[var(--line-1)] rounded-[var(--r-xs)] px-2 py-1 bg-[var(--surface-1)] text-[var(--ink-700)] focus:outline-none focus:border-[var(--primary)]"
                         >
                           <option value={task.status} disabled>
                             {task.status === 'backlog' ? 'Backlog' : task.status === 'onHold' ? 'On Hold' : 'In Progress'}
@@ -345,15 +350,16 @@ export function TableView({ tasks, loading, onBulkDelete, onBulkReassign, onBulk
                     {isMember ? (
                       <button
                         onClick={() => setIssueTask(task)}
-                        className="text-xs px-2 py-1 bg-amber-50 border border-amber-200 text-amber-700 rounded-lg hover:bg-amber-100 transition-colors whitespace-nowrap"
+                        className="inline-flex items-center gap-1 text-[11px] px-2 py-1 bg-amber-50 border border-amber-200 text-amber-700 rounded-[var(--r-sm)] hover:bg-amber-100 transition-colors whitespace-nowrap"
                         title="Raise Issue"
                       >
-                        ⚠ Issue
+                        <AlertTriangle size={11} strokeWidth={1.8} /> Issue
                       </button>
                     ) : (
                       <button onClick={() => setEditTask(task)}
-                        className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-gray-600 transition-all">
-                        <Pencil size={14} />
+                        aria-label="Edit task"
+                        className="opacity-0 group-hover:opacity-100 text-[var(--ink-400)] hover:text-[var(--ink-900)] transition-all">
+                        <Pencil size={13} strokeWidth={1.8} />
                       </button>
                     )}
                   </td>

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { LayoutList, LayoutGrid } from 'lucide-react'
+import { LayoutList, LayoutGrid, CheckSquare, Users } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { useTasks } from '../../hooks/useTasks'
 import { useTeam } from '../../hooks/useTeam'
@@ -14,8 +14,6 @@ type ViewMode = 'table' | 'kanban'
 
 export function TasksPage() {
   const { currentUser } = useApp()
-  // For team leads, RLS policy handles cross-dept visibility (Issue 4)
-  // No frontend dept filter — the DB policy returns tasks where assignee is in their dept
   const filters = currentUser?.role === 'member'
     ? { assigneeId: currentUser.id }
     : {}
@@ -29,8 +27,6 @@ export function TasksPage() {
   const [priorityFilter, setPriorityFilter] = useState('')
   const [memberFilter, setMemberFilter] = useState('')
   const [filterAssignedBy, setFilterAssignedBy] = useState<string>('all')
-
-  // Feature 2: Team Lead tab state
   const [taskTab, setTaskTab] = useState<'team' | 'mine'>('team')
 
   const filtered = useMemo(() => tasks.filter(t => {
@@ -42,14 +38,12 @@ export function TasksPage() {
     return true
   }), [tasks, search, statusFilter, priorityFilter, memberFilter, filterAssignedBy])
 
-  // Feature 2: Apply team/mine tab filter for teamLeads
   const displayedTasks = useMemo(() => {
     if (currentUser?.role !== 'teamLead') return filtered
     if (taskTab === 'mine') return filtered.filter(t => t.assignee_id === currentUser.id)
     return filtered.filter(t => t.assignee_id !== currentUser.id)
   }, [filtered, taskTab, currentUser])
 
-  // Feature 9: Unique task creators for the "Assigned By" filter
   const uniqueCreators = useMemo(() => {
     const seen = new Set<string>()
     return tasks
@@ -72,74 +66,84 @@ export function TasksPage() {
     catch (err) { toast.error(friendlyError(err)) }
   }
 
+  const selectCls = 'text-[13px] border border-[var(--line-1)] rounded-[var(--r-sm)] px-3 py-2 bg-[var(--surface-1)] text-[var(--ink-700)] focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 cursor-pointer transition-colors'
+
   return (
-    <div className="px-4 py-5 md:px-6 md:py-8 max-w-[1280px] mx-auto">
+    <div className="px-4 py-5 md:px-6 md:py-8 max-w-[1440px] mx-auto animate-reveal-up">
       {/* Header */}
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900" style={{ letterSpacing: '-0.5px' }}>{title}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{displayedTasks.length} tasks shown</p>
+      <div className="flex items-start sm:items-center justify-between gap-4 mb-6">
+        <div className="min-w-0">
+          <span className="eyebrow">— Operations · Tasks</span>
+          <h1 className="font-display text-[clamp(1.5rem,2.2vw,1.875rem)] font-semibold tracking-[-0.02em] text-[var(--ink-900)] mt-1.5">{title}</h1>
+          <p className="text-[13px] text-[var(--ink-500)] mt-1 font-mono tabular-nums">
+            {displayedTasks.length} <span className="not-italic">shown · </span>
+            <span className="text-[var(--primary)]">{active}</span> active · <span className="text-emerald-600">{done}</span> done
+          </p>
         </div>
-        <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-lg">
+        <div className="flex items-center gap-1 p-1 bg-[var(--surface-2)] border border-[var(--line-1)] rounded-[var(--r-sm)] shrink-0">
           <button
             onClick={() => setView('table')}
-            className={`p-1.5 rounded-md transition-colors ${view === 'table' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+            className={`p-1.5 rounded-[var(--r-xs)] transition-all ${view === 'table' ? 'bg-[var(--surface-1)] text-[var(--ink-900)] shadow-[var(--shadow-xs)]' : 'text-[var(--ink-400)] hover:text-[var(--ink-900)]'}`}
             title="Table view"
+            aria-label="Table view"
           >
-            <LayoutList size={16} />
+            <LayoutList size={15} strokeWidth={1.8} />
           </button>
           <button
             onClick={() => setView('kanban')}
-            className={`p-1.5 rounded-md transition-colors ${view === 'kanban' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+            className={`p-1.5 rounded-[var(--r-xs)] transition-all ${view === 'kanban' ? 'bg-[var(--surface-1)] text-[var(--ink-900)] shadow-[var(--shadow-xs)]' : 'text-[var(--ink-400)] hover:text-[var(--ink-900)]'}`}
             title="Kanban view"
+            aria-label="Kanban view"
           >
-            <LayoutGrid size={16} />
+            <LayoutGrid size={15} strokeWidth={1.8} />
           </button>
         </div>
       </div>
 
-      {/* Feature 2: Team Lead tabs */}
+      {/* Team Lead tabs */}
       {currentUser?.role === 'teamLead' && (
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit mb-4">
-          {(['team', 'mine'] as const).map(tab => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setTaskTab(tab)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                taskTab === tab
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {tab === 'team' ? '👥 Team Tasks' : '✓ My Tasks'}
-              <span className={`ml-2 text-xs rounded-full px-2 py-0.5 ${
-                taskTab === tab ? 'bg-[#0A5540] text-white' : 'bg-gray-200 text-gray-500'
-              }`}>
-                {tab === 'team'
-                  ? filtered.filter(t => t.assignee_id !== currentUser.id).length
-                  : filtered.filter(t => t.assignee_id === currentUser.id).length
-                }
-              </span>
-            </button>
-          ))}
+        <div className="flex gap-1 bg-[var(--surface-2)] border border-[var(--line-1)] rounded-[var(--r-md)] p-1 w-fit mb-4">
+          {(['team', 'mine'] as const).map(tab => {
+            const count = tab === 'team'
+              ? filtered.filter(t => t.assignee_id !== currentUser.id).length
+              : filtered.filter(t => t.assignee_id === currentUser.id).length
+            const Icon = tab === 'team' ? Users : CheckSquare
+            return (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setTaskTab(tab)}
+                className={`px-3.5 py-1.5 rounded-[var(--r-sm)] text-[13px] font-medium transition-all inline-flex items-center gap-1.5 ${
+                  taskTab === tab
+                    ? 'bg-[var(--surface-1)] text-[var(--ink-900)] shadow-[var(--shadow-xs)]'
+                    : 'text-[var(--ink-500)] hover:text-[var(--ink-900)]'
+                }`}
+              >
+                <Icon size={13} strokeWidth={1.8} />
+                {tab === 'team' ? 'Team Tasks' : 'My Tasks'}
+                <span className={`font-mono tabular-nums text-[11px] rounded-full px-1.5 py-0.5 ${
+                  taskTab === tab ? 'bg-[var(--primary)] text-white' : 'bg-[var(--surface-3)] text-[var(--ink-500)]'
+                }`}>
+                  {count}
+                </span>
+              </button>
+            )
+          })}
         </div>
       )}
 
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        <SearchInput value={search} onChange={setSearch} placeholder="Search tasks..." className="flex-1 min-w-[160px]" />
+        <SearchInput value={search} onChange={setSearch} placeholder="Search tasks..." className="w-full sm:flex-1 sm:min-w-[240px]" />
         <div className="flex items-center gap-2 flex-wrap">
-          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none">
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className={selectCls}>
             <option value="">All Status</option>
             <option value="backlog">Backlog</option>
             <option value="inProgress">In Progress</option>
-            <option value="onHold">⏸ On Hold</option>
+            <option value="onHold">On Hold</option>
             <option value="done">Done</option>
           </select>
-          <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none">
+          <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)} className={selectCls}>
             <option value="">All Priorities</option>
             <option value="critical">Critical</option>
             <option value="high">High</option>
@@ -147,39 +151,26 @@ export function TasksPage() {
             <option value="low">Low</option>
           </select>
           {currentUser?.role !== 'member' && (
-            <select value={memberFilter} onChange={e => setMemberFilter(e.target.value)}
-              className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none">
+            <select value={memberFilter} onChange={e => setMemberFilter(e.target.value)} className={selectCls}>
               <option value="">All Members</option>
               {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
             </select>
           )}
-          {/* Feature 9: Assigned By filter */}
           {currentUser?.role !== 'member' && uniqueCreators.length > 0 && (
-            <select
-              value={filterAssignedBy}
-              onChange={e => setFilterAssignedBy(e.target.value)}
-              className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none"
-            >
+            <select value={filterAssignedBy} onChange={e => setFilterAssignedBy(e.target.value)} className={selectCls}>
               <option value="all">Assigned By: All</option>
               {uniqueCreators.map(creator => (
-                <option key={creator.id} value={creator.id}>
-                  {creator.name}
-                </option>
+                <option key={creator.id} value={creator.id}>{creator.name}</option>
               ))}
             </select>
           )}
-          <span className="text-sm text-gray-500 ml-1">
-            <span className="text-blue-600 font-medium">{active}</span> active ·{' '}
-            <span className="text-green-600 font-medium">{done}</span> done
-          </span>
         </div>
       </div>
 
       {/* Table or Kanban */}
       {view === 'table' ? (
         <>
-          {/* Desktop table */}
-          <div className="hidden md:block bg-white border border-gray-100 rounded-xl overflow-hidden">
+          <div className="hidden md:block bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] overflow-hidden shadow-[var(--shadow-xs)]">
             <TableView
               tasks={displayedTasks}
               loading={loading}
@@ -190,33 +181,32 @@ export function TasksPage() {
             />
           </div>
 
-          {/* Mobile cards */}
           <div className="md:hidden space-y-2">
             {loading ? (
               <div className="space-y-2">
-                {[1,2,3].map(i => <div key={i} className="bg-white border border-gray-100 rounded-xl p-4 h-20 skeleton" />)}
+                {[1,2,3].map(i => <div key={i} className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-md)] p-4 h-20 skeleton" />)}
               </div>
             ) : displayedTasks.length === 0 ? (
-              <div className="text-center text-sm text-gray-400 py-12">No tasks found</div>
+              <div className="text-center text-[13px] text-[var(--ink-400)] py-12">No tasks found</div>
             ) : displayedTasks.map(task => (
-              <div key={task.id} className="bg-white border border-gray-100 rounded-xl p-4">
+              <div key={task.id} className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-md)] p-4 shadow-[var(--shadow-xs)]">
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div>
                     <span className="inline-block mb-1"><PriorityBadgeInline priority={task.priority} /></span>
-                    <p className="text-sm font-medium text-gray-900">{task.title}</p>
-                    {task.project_name && <p className="text-xs text-gray-400 mt-0.5">{task.project_name}</p>}
+                    <p className="text-[13px] font-medium text-[var(--ink-900)]">{task.title}</p>
+                    {task.project_name && <p className="text-[11px] text-[var(--ink-400)] mt-0.5">{task.project_name}</p>}
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {task.assignee_id && <span className="text-xs text-gray-500">{task.assignee_name}</span>}
-                    {task.due_date && <span className="text-xs text-gray-400">📅 {task.due_date}</span>}
+                  <div className="flex items-center gap-2 min-w-0">
+                    {task.assignee_id && <span className="text-[11px] text-[var(--ink-500)] truncate">{task.assignee_name}</span>}
+                    {task.due_date && <span className="text-[11px] text-[var(--ink-400)] font-mono tabular-nums">{task.due_date}</span>}
                   </div>
                   <select value={task.status} onChange={e => handleStatusChange(task.id, e.target.value as TaskStatus)}
-                    className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white text-gray-700 focus:outline-none">
+                    className="text-[11px] border border-[var(--line-1)] rounded-[var(--r-xs)] px-2 py-1 bg-[var(--surface-1)] text-[var(--ink-700)] focus:outline-none">
                     <option value="backlog">Backlog</option>
                     <option value="inProgress">In Progress</option>
-                    <option value="onHold">⏸ On Hold</option>
+                    <option value="onHold">On Hold</option>
                     <option value="done">Done</option>
                   </select>
                 </div>
@@ -236,13 +226,13 @@ export function TasksPage() {
 
 function PriorityBadgeInline({ priority }: { priority: string }) {
   const styles: Record<string, string> = {
-    critical: 'bg-red-100 text-red-700',
-    high: 'bg-orange-100 text-orange-700',
-    medium: 'bg-yellow-100 text-yellow-700',
-    low: 'bg-gray-100 text-gray-600',
+    critical: 'bg-red-50 text-red-700 ring-red-200 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-900/60',
+    high:     'bg-orange-50 text-orange-700 ring-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:ring-orange-900/60',
+    medium:   'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/60',
+    low:      'bg-[var(--surface-2)] text-[var(--ink-500)] ring-[var(--line-2)]',
   }
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${styles[priority] || 'bg-gray-100 text-gray-600'}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium tracking-[-0.005em] ring-1 ring-inset ${styles[priority] || styles.low}`}>
       {priority.charAt(0).toUpperCase() + priority.slice(1)}
     </span>
   )

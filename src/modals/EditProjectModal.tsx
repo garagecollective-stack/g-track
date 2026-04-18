@@ -42,8 +42,8 @@ export function EditProjectModal({ open, onClose, project }: Props) {
 
   if (!project) return null
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
-  const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-[9px] text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#0A5540] focus:ring-2 focus:ring-[#0A5540]/10"
-  const labelCls = "text-sm font-medium text-gray-700 block mb-1.5"
+  const inputCls = "w-full border border-[var(--line-1)] rounded-[var(--r-sm)] px-3 py-[9px] text-sm text-[var(--ink-900)] placeholder-[var(--ink-400)] focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15"
+  const labelCls = "text-sm font-medium text-[var(--ink-700)] block mb-1.5"
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -102,8 +102,8 @@ export function EditProjectModal({ open, onClose, project }: Props) {
           <div><label className={labelCls}>SOP</label><textarea value={form.sop} onChange={e => set('sop', e.target.value)} rows={3} className={`${inputCls} resize-vertical`} /></div>
           <div><label className={labelCls}>Reference Link</label><input type="url" value={form.reference_link} onChange={e => set('reference_link', e.target.value)} className={inputCls} placeholder="https://..." /></div>
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
-            <button type="submit" disabled={loading} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0A5540] rounded-lg hover:bg-[#0d6b51] transition-colors disabled:opacity-70 disabled:pointer-events-none">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-[var(--ink-700)] bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-sm)] hover:bg-[var(--surface-2)] transition-colors">Cancel</button>
+            <button type="submit" disabled={loading} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[var(--primary)] rounded-[var(--r-sm)] hover:bg-[var(--primary-700)] transition-colors disabled:opacity-70 disabled:pointer-events-none">
               {loading && <LoadingSpinner size="sm" color="white" />} Update Project
             </button>
           </div>

@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { supabaseAdminAuth, db } from '../../lib/supabaseAdmin'
+import { assertRateLimit, clearRateLimit, recordRateLimitFailure } from '../../lib/authRateLimit'
 import type { Profile } from '../../types'
 
 interface AdminContextType {
@@ -12,65 +13,83 @@ interface AdminContextType {
 const AdminContext = createContext<AdminContextType | null>(null)
 
 export function AdminProvider({ children }: { children: React.ReactNode }) {
-  const [adminUser,    setAdminUser]    = useState<Profile | null>(null)
+  const [adminUser, setAdminUser] = useState<Profile | null>(null)
   const [adminLoading, setAdminLoading] = useState(true)
 
-  // Fetch profile — uses service-role client if available, otherwise uses session client
   const fetchAdminProfile = useCallback(async (userId: string): Promise<Profile | null> => {
     const { data, error } = await db
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .single()
-    if (error || !data) return null
+
+    if (error || !data) {
+      return null
+    }
+
     return data as Profile
   }, [])
 
-  // Restore persisted admin session on mount
   useEffect(() => {
     let handled = false
 
-    supabaseAdminAuth.auth.getSession().then(({ data: { session: s } }) => {
-      if (handled) return
-      if (s?.user) {
-        fetchAdminProfile(s.user.id).then(profile => {
-          if (profile?.role === 'super_admin') setAdminUser(profile)
-          else setAdminUser(null)
-        }).finally(() => setAdminLoading(false))
-      } else {
-        setAdminLoading(false)
+    supabaseAdminAuth.auth.getSession().then(({ data: { session } }) => {
+      if (handled) {
+        return
       }
+
+      if (session?.user) {
+        fetchAdminProfile(session.user.id)
+          .then(profile => {
+            setAdminUser(profile?.role === 'super_admin' ? profile : null)
+          })
+          .finally(() => setAdminLoading(false))
+        return
+      }
+
+      setAdminLoading(false)
     })
 
-    const { data: { subscription } } = supabaseAdminAuth.auth.onAuthStateChange((_event, s) => {
+    const { data: { subscription } } = supabaseAdminAuth.auth.onAuthStateChange((_event, session) => {
       handled = true
-      if (s?.user) {
+
+      if (session?.user) {
         setAdminLoading(true)
-        fetchAdminProfile(s.user.id).then(profile => {
-          if (profile?.role === 'super_admin') setAdminUser(profile)
-          else setAdminUser(null)
-        }).finally(() => setAdminLoading(false))
-      } else {
-        setAdminUser(null)
-        setAdminLoading(false)
+        fetchAdminProfile(session.user.id)
+          .then(profile => {
+            setAdminUser(profile?.role === 'super_admin' ? profile : null)
+          })
+          .finally(() => setAdminLoading(false))
+        return
       }
+
+      setAdminUser(null)
+      setAdminLoading(false)
     })
 
     return () => subscription.unsubscribe()
   }, [fetchAdminProfile])
 
   const signInAdmin = useCallback(async (email: string, password: string) => {
-    // Step 1 — authenticate with anon-key client (correct for signInWithPassword)
-    const { data: authData, error: authError } =
-      await supabaseAdminAuth.auth.signInWithPassword({ email, password })
+    const normalizedEmail = email.trim().toLowerCase()
+    const rateLimitKey = `admin-signin:${normalizedEmail}`
+
+    assertRateLimit({ key: rateLimitKey, limit: 5, windowMs: 5 * 60 * 1000 })
+
+    const { data: authData, error: authError } = await supabaseAdminAuth.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    })
 
     if (authError) {
-      // Throw the real Supabase error message so the UI can display it
+      recordRateLimitFailure({ key: rateLimitKey, windowMs: 5 * 60 * 1000 })
       throw new Error(authError.message)
     }
-    if (!authData.user) throw new Error('Authentication returned no user.')
 
-    // Step 2 — verify super_admin role via service-role data client
+    if (!authData.user) {
+      throw new Error('Authentication returned no user.')
+    }
+
     const profile = await fetchAdminProfile(authData.user.id)
 
     if (!profile) {
@@ -83,11 +102,10 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
     if (profile.role !== 'super_admin') {
       await supabaseAdminAuth.auth.signOut()
-      throw new Error(
-        `Access denied. Your role is "${profile.role}" — only super_admin can access this panel.`
-      )
+      throw new Error(`Access denied. Your role is "${profile.role}" and cannot access this panel.`)
     }
 
+    clearRateLimit(rateLimitKey)
     setAdminUser(profile)
   }, [fetchAdminProfile])
 

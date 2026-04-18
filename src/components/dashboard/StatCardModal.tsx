@@ -59,32 +59,32 @@ export function StatCardModal({ isOpen, onClose, type, title, items, loading }: 
       {/* Backdrop */}
       <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
         <div
-          className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col overflow-hidden"
+          className="bg-[var(--surface-1)] rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col overflow-hidden"
           onClick={e => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-            <h2 className="text-base font-bold text-gray-900 flex-1">
+          <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--line-1)]">
+            <h2 className="text-base font-bold text-[var(--ink-900)] flex-1">
               {title}
-              <span className="ml-2 text-xs font-medium bg-gray-100 text-gray-600 rounded-full px-2 py-0.5">
+              <span className="ml-2 text-xs font-medium bg-[var(--surface-2)] text-[var(--ink-700)] rounded-full px-2 py-0.5">
                 {filtered.length}
               </span>
             </h2>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-400">
+            <button onClick={onClose} className="p-1.5 rounded-[var(--r-sm)] hover:bg-[var(--surface-2)] transition-colors text-[var(--ink-400)]">
               <X size={16} />
             </button>
           </div>
 
           {/* Filters */}
-          <div className="flex flex-wrap items-center gap-2 px-5 py-3 border-b border-gray-100 bg-gray-50/50">
-            <div className="relative flex-1 min-w-[180px]">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <div className="flex flex-wrap items-center gap-2 px-5 py-3 border-b border-[var(--line-1)] bg-[var(--surface-2)]/50">
+            <div className="relative w-full sm:flex-1">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-400)]" />
               <input
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search..."
-                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#0A5540] bg-white"
+                className="w-full pl-9 pr-3 py-2 text-sm border border-[var(--line-1)] rounded-[var(--r-sm)] focus:outline-none focus:border-[var(--primary)] bg-[var(--surface-1)]"
               />
             </div>
             {type !== 'projects' && (
@@ -92,7 +92,7 @@ export function StatCardModal({ isOpen, onClose, type, title, items, loading }: 
                 <select
                   value={statusFilter}
                   onChange={e => setStatusFilter(e.target.value)}
-                  className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-[#0A5540]"
+                  className="text-sm border border-[var(--line-1)] rounded-[var(--r-sm)] px-3 py-2 bg-[var(--surface-1)] focus:outline-none focus:border-[var(--primary)]"
                 >
                   <option value="">Status ▾</option>
                   <option value="backlog">Backlog</option>
@@ -103,7 +103,7 @@ export function StatCardModal({ isOpen, onClose, type, title, items, loading }: 
                 <select
                   value={priorityFilter}
                   onChange={e => setPriorityFilter(e.target.value)}
-                  className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:border-[#0A5540]"
+                  className="text-sm border border-[var(--line-1)] rounded-[var(--r-sm)] px-3 py-2 bg-[var(--surface-1)] focus:outline-none focus:border-[var(--primary)]"
                 >
                   <option value="">Priority ▾</option>
                   <option value="critical">Critical</option>
@@ -118,27 +118,27 @@ export function StatCardModal({ isOpen, onClose, type, title, items, loading }: 
           {/* Body */}
           <div className="overflow-y-auto flex-1">
             {loading ? (
-              <div className="flex items-center justify-center py-16 text-gray-400 text-sm">Loading...</div>
+              <div className="flex items-center justify-center py-16 text-[var(--ink-400)] text-sm">Loading...</div>
             ) : filtered.length === 0 ? (
-              <div className="flex items-center justify-center py-16 text-gray-400 text-sm">No items found</div>
+              <div className="flex items-center justify-center py-16 text-[var(--ink-400)] text-sm">No items found</div>
             ) : (
               <table className="w-full">
-                <thead className="sticky top-0 bg-gray-50 z-10">
+                <thead className="sticky top-0 bg-[var(--surface-2)] z-10">
                   <tr>
-                    <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-[var(--ink-500)] uppercase tracking-wider">
                       {type === 'projects' ? 'Project' : 'Task'}
                     </th>
                     {type !== 'projects' && (
-                      <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                      <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-[var(--ink-500)] uppercase tracking-wider hidden sm:table-cell">
                         Project
                       </th>
                     )}
                     {showPriority && (
-                      <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                      <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-[var(--ink-500)] uppercase tracking-wider hidden md:table-cell">
                         Priority
                       </th>
                     )}
-                    <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-[var(--ink-500)] uppercase tracking-wider">
                       Status
                     </th>
                   </tr>
@@ -152,14 +152,14 @@ export function StatCardModal({ isOpen, onClose, type, title, items, loading }: 
                       <tr
                         key={item.id}
                         onClick={() => handleItemClick(item)}
-                        className="border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors"
+                        className="border-b border-[var(--line-1)] hover:bg-[var(--surface-2)] cursor-pointer transition-colors"
                       >
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             {isOverdueItem && (
                               <AlertTriangle size={12} className="text-red-500 shrink-0" />
                             )}
-                            <span className={`text-sm font-medium text-gray-900 ${isDoneItem ? 'line-through text-gray-400' : ''}`}>
+                            <span className={`text-sm font-medium text-[var(--ink-900)] ${isDoneItem ? 'line-through text-[var(--ink-400)]' : ''}`}>
                               {getItemTitle(item)}
                             </span>
                             {isDoneItem && (
@@ -169,16 +169,16 @@ export function StatCardModal({ isOpen, onClose, type, title, items, loading }: 
                             )}
                           </div>
                           {isTaskItem && item.assignee_name && (
-                            <p className="text-xs text-gray-400 mt-0.5">{item.assignee_name}</p>
+                            <p className="text-xs text-[var(--ink-400)] mt-0.5">{item.assignee_name}</p>
                           )}
                         </td>
                         {!isTaskItem ? null : (
                           <td className="px-4 py-3 hidden sm:table-cell">
                             {item.project_name ? (
-                              <span className="text-xs bg-gray-100 text-gray-600 rounded-md px-2 py-0.5">
+                              <span className="text-xs bg-[var(--surface-2)] text-[var(--ink-700)] rounded-[var(--r-xs)] px-2 py-0.5">
                                 {item.project_name}
                               </span>
-                            ) : <span className="text-gray-300">—</span>}
+                            ) : <span className="text-[var(--ink-400)]">—</span>}
                           </td>
                         )}
                         {showPriority && (
@@ -198,8 +198,8 @@ export function StatCardModal({ isOpen, onClose, type, title, items, loading }: 
           </div>
 
           {/* Footer */}
-          <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50">
-            <p className="text-xs text-gray-400">Showing {filtered.length} of {items.length}</p>
+          <div className="px-5 py-3 border-t border-[var(--line-1)] bg-[var(--surface-2)]/50">
+            <p className="text-xs text-[var(--ink-400)]">Showing {filtered.length} of {items.length}</p>
           </div>
         </div>
       </div>

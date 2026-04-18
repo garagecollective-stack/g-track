@@ -2,19 +2,59 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- ─── Primary Meta ──────────────────────────────── -->
+    <title>G-Track — Garage Collective</title>
+    <meta name="description" content="Project management dashboard for Garage Collective" />
+    <meta name="application-name" content="G-Track" />
+
+    <!-- ─── Theme Color ───────────────────────────────── -->
+    <meta name="theme-color" content="#0A5540" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0A5540" media="(prefers-color-scheme: dark)" />
+
+    <!-- ─── Favicon ──────────────────────────────────── -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+
+    <!-- ─── Apple / iOS ──────────────────────────────── -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="G-Track" />
-    <meta name="theme-color" content="#0A5540" />
-    <meta name="description" content="Project & task management for your team" />
-    <link rel="apple-touch-icon" href="/favicon.png" />
-    <title>G-Track</title>
+
+    <!-- ─── Android / Chrome ─────────────────────────── -->
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- ─── Microsoft / Windows ──────────────────────── -->
+    <meta name="msapplication-TileColor" content="#0A5540" />
+    <meta name="msapplication-TileImage" content="/icons/mstile-144x144.png" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
+    <meta name="msapplication-tap-highlight" content="no" />
+
+    <!-- ─── Open Graph ───────────────────────────────── -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="G-Track — Garage Collective" />
+    <meta property="og:description" content="Project management dashboard for Garage Collective" />
+    <meta property="og:image" content="/icons/icon-512x512.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+
+    <!-- ─── Twitter / X Card ─────────────────────────── -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="G-Track" />
+    <meta name="twitter:image" content="/icons/icon-512x512.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <!-- Typography system (typeui.sh dashboard skill):
+         IBM Plex Sans — primary + display
+         IBM Plex Mono — data / tabular / code
+         DM Sans / DM Mono retained for legacy inline styles -->
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@100;200;300;400;500;600;700&family=IBM+Plex+Mono:wght@300;400;500;600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
   </head>
   <body>
     <div id="root"></div>

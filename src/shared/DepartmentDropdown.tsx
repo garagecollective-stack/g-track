@@ -64,14 +64,14 @@ export function DepartmentDropdown({ value, onChange, disabled, placeholder = 'S
     return () => document.removeEventListener('mousedown', onMouseDown)
   }, [])
 
-  // Focus search on open
-  useEffect(() => {
-    if (open) {
-      setSearch('')
-      setFocusedIdx(-1)
-      setTimeout(() => searchRef.current?.focus(), 50)
-    }
-  }, [open])
+  const openDropdown = () => {
+    setSearch('')
+    setFocusedIdx(-1)
+    setOpen(true)
+    setTimeout(() => searchRef.current?.focus(), 50)
+  }
+
+  const closeDropdown = () => setOpen(false)
 
   const getDeptColor = (dept: DeptItem) =>
     dept.color || DEPT_COLORS[dept.name] || '#9CA3AF'
@@ -88,19 +88,19 @@ export function DepartmentDropdown({ value, onChange, disabled, placeholder = 'S
   const handleKeyDownBtn = (e: React.KeyboardEvent) => {
     if (!open) {
       if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault(); setOpen(true)
+        e.preventDefault(); openDropdown()
       }
       return
     }
     switch (e.key) {
-      case 'Escape': e.preventDefault(); setOpen(false); break
+      case 'Escape': e.preventDefault(); closeDropdown(); break
     }
   }
 
   const handleKeyDownSearch = (e: React.KeyboardEvent) => {
     switch (e.key) {
       case 'ArrowDown': e.preventDefault(); setFocusedIdx(0); break
-      case 'Escape': e.preventDefault(); setOpen(false); break
+      case 'Escape': e.preventDefault(); closeDropdown(); break
     }
   }
 
@@ -116,13 +116,13 @@ export function DepartmentDropdown({ value, onChange, disabled, placeholder = 'S
         e.preventDefault()
         if (focusedIdx >= 0) { selectOption(allOptions[focusedIdx].name); }
         break
-      case 'Escape': e.preventDefault(); setOpen(false); break
+      case 'Escape': e.preventDefault(); closeDropdown(); break
     }
   }
 
   const selectOption = (name: string) => {
     onChange(name)
-    setOpen(false)
+    closeDropdown()
     btnRef.current?.focus()
   }
 
@@ -134,16 +134,16 @@ export function DepartmentDropdown({ value, onChange, disabled, placeholder = 'S
         onMouseEnter={() => setFocusedIdx(0)}
         onClick={() => selectOption('')}
         className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
-          focusedIdx === 0 || (!value && focusedIdx === -1) ? 'bg-gray-50 dark:bg-gray-800' : ''
-        } ${!value ? 'bg-[#edf8f4]' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+          focusedIdx === 0 || (!value && focusedIdx === -1) ? 'bg-[var(--surface-2)] dark:bg-[var(--surface-1)]' : ''
+        } ${!value ? 'bg-[var(--primary-50)]' : 'hover:bg-[var(--surface-2)] dark:hover:bg-[var(--surface-2)]'}`}
       >
         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: '#9CA3AF' }} />
-        <span className="text-sm text-gray-500 dark:text-gray-400 italic flex-1">No department</span>
-        {!value && <Check size={14} className="text-[#0A5540] shrink-0" />}
+        <span className="text-sm text-[var(--ink-500)] dark:text-[var(--ink-400)] italic flex-1">No department</span>
+        {!value && <Check size={14} className="text-[var(--primary)] shrink-0" />}
       </button>
 
       {filtered.length > 0 && (
-        <div className="border-t border-gray-100 dark:border-gray-800 mt-1 pt-1">
+        <div className="border-t border-[var(--line-1)] dark:border-[var(--line-1)] mt-1 pt-1">
           {filtered.map((dept, idx) => {
             const listIdx = idx + 1 // offset by 1 for "No department" at top
             const isSelected = value === dept.name
@@ -156,12 +156,12 @@ export function DepartmentDropdown({ value, onChange, disabled, placeholder = 'S
                 onMouseEnter={() => setFocusedIdx(listIdx)}
                 onClick={() => selectOption(dept.name)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${
-                  isSelected ? 'bg-[#edf8f4]' : isFocused ? 'bg-gray-50 dark:bg-gray-800' : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                  isSelected ? 'bg-[var(--primary-50)]' : isFocused ? 'bg-[var(--surface-2)] dark:bg-[var(--surface-1)]' : 'hover:bg-[var(--surface-2)] dark:hover:bg-[var(--surface-2)]'
                 }`}
               >
                 <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                <span className="text-sm font-medium text-gray-700 dark:text-white flex-1">{dept.name}</span>
-                {isSelected && <Check size={14} className="text-[#0A5540] shrink-0" />}
+                <span className="text-sm font-medium text-[var(--ink-700)] dark:text-[var(--ink-900)] flex-1">{dept.name}</span>
+                {isSelected && <Check size={14} className="text-[var(--primary)] shrink-0" />}
               </button>
             )
           })}
@@ -169,7 +169,7 @@ export function DepartmentDropdown({ value, onChange, disabled, placeholder = 'S
       )}
 
       {filtered.length === 0 && search && (
-        <p className="text-sm text-gray-400 text-center py-6">No departments found</p>
+        <p className="text-sm text-[var(--ink-400)] text-center py-6">No departments found</p>
       )}
     </div>
   )
@@ -178,30 +178,34 @@ export function DepartmentDropdown({ value, onChange, disabled, placeholder = 'S
     <button
       ref={btnRef}
       type="button"
-      onClick={() => !disabled && setOpen(p => !p)}
+      onClick={() => {
+        if (disabled) return
+        if (open) closeDropdown()
+        else openDropdown()
+      }}
       onKeyDown={handleKeyDownBtn}
       disabled={disabled}
-      className="w-full h-[42px] flex items-center bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-3 gap-2 transition-all duration-150 hover:border-gray-300 focus:outline-none focus:border-[#0A5540] focus:ring-2 focus:ring-[#0A5540]/10 disabled:opacity-60 disabled:cursor-not-allowed"
+      className="w-full h-[42px] flex items-center bg-[var(--surface-1)] dark:bg-[var(--surface-0)] border border-[var(--line-1)] dark:border-[var(--line-1)] rounded-[var(--r-sm)] px-3 gap-2 transition-all duration-150 hover:border-[var(--line-2)] focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 disabled:opacity-60 disabled:cursor-not-allowed"
     >
       {selectedDept ? (
         <>
           <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: getDeptColor(selectedDept) }} />
-          <span className="text-sm text-gray-700 dark:text-white">{selectedDept.name}</span>
+          <span className="text-sm text-[var(--ink-700)] dark:text-[var(--ink-900)]">{selectedDept.name}</span>
         </>
       ) : (
         <>
           <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-gray-300" />
-          <span className="text-sm text-gray-400">{placeholder}</span>
+          <span className="text-sm text-[var(--ink-400)]">{placeholder}</span>
         </>
       )}
-      <ChevronDown size={16} className={`text-gray-400 ml-auto transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
+      <ChevronDown size={16} className={`text-[var(--ink-400)] ml-auto transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
     </button>
   )
 
   const searchBar = (
-    <div className="px-3 pt-2.5 pb-2 border-b border-gray-100 dark:border-gray-800 sticky top-0 bg-white dark:bg-gray-900 z-10">
-      <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-1.5">
-        <Search size={13} className="text-gray-400 shrink-0" />
+    <div className="px-3 pt-2.5 pb-2 border-b border-[var(--line-1)] dark:border-[var(--line-1)] sticky top-0 bg-[var(--surface-1)] dark:bg-[var(--surface-0)] z-10">
+      <div className="flex items-center gap-2 bg-[var(--surface-2)] dark:bg-[var(--surface-1)] border border-[var(--line-1)] dark:border-[var(--line-1)] rounded-[var(--r-sm)] px-2.5 py-1.5">
+        <Search size={13} className="text-[var(--ink-400)] shrink-0" />
         <input
           ref={searchRef}
           type="text"
@@ -209,7 +213,7 @@ export function DepartmentDropdown({ value, onChange, disabled, placeholder = 'S
           onChange={e => setSearch(e.target.value)}
           onKeyDown={handleKeyDownSearch}
           placeholder="Search departments..."
-          className="flex-1 text-sm bg-transparent outline-none text-gray-900 dark:text-white placeholder-gray-400"
+          className="flex-1 text-sm bg-transparent outline-none text-[var(--ink-900)] dark:text-[var(--ink-900)] placeholder-[var(--ink-400)]"
         />
       </div>
     </div>
@@ -220,13 +224,13 @@ export function DepartmentDropdown({ value, onChange, disabled, placeholder = 'S
       <div ref={ref}>
         {trigger}
         {open && (
-          <div className="fixed inset-0 z-[55] flex items-end" onClick={() => setOpen(false)}>
+          <div className="fixed inset-0 z-50 flex items-end" onClick={closeDropdown}>
             <div className="absolute inset-0 bg-black/40" />
             <div
-              className="relative w-full bg-white dark:bg-gray-900 rounded-t-2xl shadow-xl max-h-[70vh] flex flex-col"
+              className="relative w-full bg-[var(--surface-1)] dark:bg-[var(--surface-0)] rounded-t-2xl shadow-xl max-h-[70vh] flex flex-col"
               onClick={e => e.stopPropagation()}
             >
-              <div className="w-10 h-1 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mt-3 mb-1" />
+              <div className="w-10 h-1 bg-gray-200 dark:bg-[var(--surface-2)] rounded-full mx-auto mt-3 mb-1" />
               {searchBar}
               <div className="overflow-y-auto">{optionList}</div>
               <div className="pb-safe pb-4" />
@@ -241,7 +245,7 @@ export function DepartmentDropdown({ value, onChange, disabled, placeholder = 'S
     <div ref={ref} className="relative">
       {trigger}
       {open && (
-        <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
+        <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-[var(--surface-1)] dark:bg-[var(--surface-0)] border border-[var(--line-1)] dark:border-[var(--line-1)] rounded-[var(--r-lg)] shadow-lg overflow-hidden">
           {searchBar}
           {optionList}
         </div>

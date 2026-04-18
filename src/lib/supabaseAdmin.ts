@@ -2,7 +2,6 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const anonKey    = import.meta.env.VITE_SUPABASE_ANON_KEY
-const serviceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY
 
 /**
  * AUTH client — always uses the anon key.
@@ -27,29 +26,24 @@ export const supabaseAdminAuth = createClient(
 )
 
 /**
- * DATA client — uses the service_role key when available.
- * Bypasses RLS entirely; safe for admin CRUD and auth.admin.* API calls.
- * No session persistence — this client is stateless.
+ * DATA client — browser-safe admin data access using the authenticated
+ * admin session only. Never expose a service role key to the frontend.
  */
 export const supabaseAdmin = createClient(
   supabaseUrl || 'https://placeholder.supabase.co',
-  serviceKey  || anonKey || 'placeholder-key',
+  anonKey || 'placeholder-key',
   {
     auth: {
       storageKey:         'gtrack-admin-data',
-      autoRefreshToken:   false,
-      persistSession:     false,
+      autoRefreshToken:   true,
+      persistSession:     true,
       detectSessionInUrl: false,
     },
   }
 )
 
-export const hasServiceRole = !!serviceKey
-
 /**
  * Use this for all admin DATA queries (SELECT / INSERT / UPDATE / DELETE on tables).
- * - If VITE_SUPABASE_SERVICE_ROLE_KEY is set → uses supabaseAdmin (bypasses RLS entirely)
- * - Otherwise → uses supabaseAdminAuth (carries the logged-in admin's session, subject to RLS)
- * Never use supabaseAdmin directly for table queries — it has no session without the service key.
+ * All privileged writes must go through edge functions that verify the caller.
  */
-export const db = hasServiceRole ? supabaseAdmin : supabaseAdminAuth
+export const db = supabaseAdminAuth

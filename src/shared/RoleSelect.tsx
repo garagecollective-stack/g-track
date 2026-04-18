@@ -18,9 +18,9 @@ const ROLE_OPTIONS: RoleOption[] = [
     label: 'Director',
     subLabel: 'Full access to all departments',
     icon: Shield,
-    iconColor: 'text-[#0A5540]',
-    badge: 'bg-[#edf8f4] text-[#0A5540]',
-    selectedBg: 'bg-[#edf8f4]',
+    iconColor: 'text-[var(--primary)]',
+    badge: 'bg-[var(--primary-50)] text-[var(--primary)]',
+    selectedBg: 'bg-[var(--primary-50)]',
   },
   {
     value: 'teamLead',
@@ -74,38 +74,38 @@ export function RoleSelect({ value, onChange, disabled }: Props) {
         type="button"
         onClick={() => !disabled && setOpen(p => !p)}
         disabled={disabled}
-        className="w-full h-[42px] flex items-center justify-between bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-3 transition-all duration-150 ease-in-out hover:border-gray-300 focus:outline-none focus:border-[#0A5540] focus:ring-2 focus:ring-[#0A5540]/10 disabled:opacity-60 disabled:cursor-not-allowed"
+        className="w-full h-[42px] flex items-center justify-between bg-[var(--surface-1)] dark:bg-[var(--surface-0)] border border-[var(--line-1)] dark:border-[var(--line-1)] rounded-[var(--r-sm)] px-3 transition-all duration-150 ease-in-out hover:border-[var(--line-2)] focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 disabled:opacity-60 disabled:cursor-not-allowed"
       >
         <div className="flex items-center gap-2">
           <SelectedIcon size={16} className={selected.iconColor} />
-          <span className="text-sm font-medium text-gray-900 dark:text-white">{selected.label}</span>
+          <span className="text-sm font-medium text-[var(--ink-900)] dark:text-[var(--ink-900)]">{selected.label}</span>
           <span className={`text-xs rounded-full px-2 py-0.5 font-medium ${selected.badge}`}>{selected.label}</span>
         </div>
-        <ChevronDown size={16} className={`text-gray-400 transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown size={16} className={`text-[var(--ink-400)] transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
+        <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-[var(--surface-1)] dark:bg-[var(--surface-0)] border border-[var(--line-1)] dark:border-[var(--line-1)] rounded-[var(--r-lg)] shadow-lg overflow-hidden">
           {ROLE_OPTIONS.map((opt, idx) => {
             const Icon = opt.icon
             const isSelected = value === opt.value
             return (
               <div key={opt.value}>
-                {idx > 0 && <div className="border-t border-gray-100 dark:border-gray-800" />}
+                {idx > 0 && <div className="border-t border-[var(--line-1)] dark:border-[var(--line-1)]" />}
                 <button
                   type="button"
                   onClick={() => { onChange(opt.value); setOpen(false) }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all duration-150 ease-in-out ${
-                    isSelected ? opt.selectedBg : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                    isSelected ? opt.selectedBg : 'hover:bg-[var(--surface-2)] dark:hover:bg-[var(--surface-2)]'
                   }`}
                 >
                   <Icon size={16} className={opt.iconColor} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">{opt.label}</p>
-                    <p className="text-xs text-gray-400">{opt.subLabel}</p>
+                    <p className="text-sm font-medium text-[var(--ink-900)] dark:text-[var(--ink-900)]">{opt.label}</p>
+                    <p className="text-xs text-[var(--ink-400)]">{opt.subLabel}</p>
                   </div>
                   <span className={`text-xs rounded-full px-2 py-0.5 font-medium shrink-0 ${opt.badge}`}>{opt.label}</span>
-                  {isSelected && <Check size={14} className="text-[#0A5540] shrink-0" />}
+                  {isSelected && <Check size={14} className="text-[var(--primary)] shrink-0" />}
                 </button>
               </div>
             )

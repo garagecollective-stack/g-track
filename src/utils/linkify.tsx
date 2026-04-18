@@ -20,7 +20,7 @@ export function linkifyText(text: string): React.ReactNode[] {
           target="_blank"
           rel="noopener noreferrer"
           onClick={e => e.stopPropagation()}
-          className="text-[#0A5540] underline hover:text-[#0d6b51] break-all"
+          className="text-[#0A5540] underline hover:text-[#084633] break-all"
         >
           {part}
         </a>

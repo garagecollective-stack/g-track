@@ -23,7 +23,9 @@ export function useAdminDepts() {
     setLoading(false)
   }, [])
 
-  useEffect(() => { fetchDepts() }, [fetchDepts])
+  useEffect(() => {
+    void fetchDepts()
+  }, [fetchDepts])
 
   const createDept = async (payload: DeptPayload) => {
     const { error } = await db.from('departments').insert({

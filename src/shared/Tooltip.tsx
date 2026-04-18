@@ -23,8 +23,8 @@ export function Tooltip({ content, children, position = 'top' }: Props) {
     >
       {children}
       {visible && (
-        <div className={`absolute ${posStyles[position]} z-50 pointer-events-none whitespace-nowrap`}>
-          <div className="bg-gray-900 text-white text-xs rounded px-2 py-1">
+        <div className={`absolute ${posStyles[position]} z-50 pointer-events-none animate-fade-scale-in`}>
+          <div className="bg-[#09090b] text-white text-[11px] font-medium rounded-[var(--r-xs)] px-2 py-1 max-w-[200px] break-words text-center shadow-[var(--shadow-lg)] ring-1 ring-white/10">
             {content}
           </div>
         </div>

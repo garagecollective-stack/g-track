@@ -12,7 +12,7 @@ const STATUS_STYLE: Record<string, string> = {
   open: 'bg-red-100 text-red-700',
   in_review: 'bg-blue-100 text-blue-700',
   resolved: 'bg-green-100 text-green-700',
-  closed: 'bg-gray-100 text-gray-600',
+  closed: 'bg-[var(--surface-2)] text-[var(--ink-700)]',
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -72,28 +72,31 @@ export function IssuesPage() {
   ]
 
   return (
-    <div className="px-4 py-5 md:px-6 md:py-8 max-w-[1280px] mx-auto">
+    <div className="px-4 py-5 md:px-6 md:py-8 max-w-[1440px] mx-auto">
       {/* Header */}
       <div className="mb-5">
-        <h1 className="text-2xl font-bold text-gray-900" style={{ letterSpacing: '-0.5px' }}>Issues</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Manage and respond to team queries</p>
+        <h1 className="text-2xl font-bold text-[var(--ink-900)]" style={{ letterSpacing: '-0.5px' }}>Issues</h1>
+        <p className="text-sm text-[var(--ink-500)] mt-0.5">Manage and respond to team queries</p>
       </div>
 
       {/* Tab pills */}
-      <div className="flex items-center gap-1.5 mb-4 overflow-x-auto pb-1 flex-wrap">
+      <div className="relative mb-4">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
         {TABS.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
               activeTab === tab.id
-                ? 'bg-[#0A5540] text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                ? 'bg-[var(--primary)] text-white'
+                : 'bg-[var(--surface-2)] text-[var(--ink-700)] hover:bg-gray-200'
             }`}
           >
             {tab.label}
           </button>
         ))}
+      </div>
+      <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-gray-50 to-transparent pointer-events-none" />
       </div>
 
       {/* Filter bar */}
@@ -102,10 +105,10 @@ export function IssuesPage() {
           value={search}
           onChange={setSearch}
           placeholder="Search issues..."
-          className="flex-1 min-w-[180px]"
+          className="w-full sm:flex-1"
         />
         <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}
-          className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:border-[#0A5540]">
+          className="text-sm border border-[var(--line-1)] rounded-[var(--r-sm)] px-3 py-2 bg-[var(--surface-1)] text-[var(--ink-700)] focus:outline-none focus:border-[var(--primary)]">
           <option value="">All Priorities</option>
           <option value="urgent">Urgent</option>
           <option value="high">High</option>
@@ -114,14 +117,14 @@ export function IssuesPage() {
         </select>
         {depts.length > 0 && (
           <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:border-[#0A5540]">
+            className="text-sm border border-[var(--line-1)] rounded-[var(--r-sm)] px-3 py-2 bg-[var(--surface-1)] text-[var(--ink-700)] focus:outline-none focus:border-[var(--primary)]">
             <option value="">All Departments</option>
             {depts.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
         )}
         {raisedByOptions.length > 0 && (
           <select value={raisedByFilter} onChange={e => setRaisedByFilter(e.target.value)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:border-[#0A5540]">
+            className="text-sm border border-[var(--line-1)] rounded-[var(--r-sm)] px-3 py-2 bg-[var(--surface-1)] text-[var(--ink-700)] focus:outline-none focus:border-[var(--primary)]">
             <option value="">All Raised By</option>
             {raisedByOptions.map(n => <option key={n} value={n}>{n}</option>)}
           </select>
@@ -129,27 +132,27 @@ export function IssuesPage() {
       </div>
 
       {/* Table — desktop */}
-      <div className="hidden md:block bg-white border border-gray-100 rounded-xl overflow-hidden">
+      <div className="hidden md:block bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-400">
-            <div className="animate-spin w-6 h-6 border-2 border-[#0A5540] border-t-transparent rounded-full mx-auto mb-3" />
+          <div className="p-8 text-center text-[var(--ink-400)]">
+            <div className="animate-spin w-6 h-6 border-2 border-[var(--primary)] border-t-transparent rounded-full mx-auto mb-3" />
             Loading issues...
           </div>
         ) : filtered.length === 0 ? (
-          <div className="py-16 text-center text-gray-400">
+          <div className="py-16 text-center text-[var(--ink-400)]">
             <AlertCircle size={40} className="mx-auto mb-3 opacity-20" />
             <p className="text-sm font-medium">No {activeTab === 'all' ? '' : activeTab} issues</p>
           </div>
         ) : (
           <table className="w-full">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Issue Title</th>
-                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Raised By</th>
-                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Related To</th>
-                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Priority</th>
-                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Updated</th>
+              <tr className="bg-[var(--surface-2)] border-b border-[var(--line-1)]">
+                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-[var(--ink-500)] uppercase tracking-wider">Issue Title</th>
+                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-[var(--ink-500)] uppercase tracking-wider">Raised By</th>
+                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-[var(--ink-500)] uppercase tracking-wider">Related To</th>
+                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-[var(--ink-500)] uppercase tracking-wider">Priority</th>
+                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-[var(--ink-500)] uppercase tracking-wider">Status</th>
+                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-[var(--ink-500)] uppercase tracking-wider">Updated</th>
               </tr>
             </thead>
             <tbody>
@@ -157,19 +160,19 @@ export function IssuesPage() {
                 <tr
                   key={issue.id}
                   onClick={() => setOpenIssue(issue)}
-                  className="border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer"
+                  className="border-b border-[var(--line-1)] hover:bg-[var(--surface-2)] transition-colors cursor-pointer"
                 >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <span className={`w-2 h-2 rounded-full shrink-0 ${PRIORITY_DOT[issue.priority] || 'bg-gray-400'}`} />
-                      <span className="text-sm font-medium text-gray-900">{issue.title}</span>
+                      <span className="text-sm font-medium text-[var(--ink-900)]">{issue.title}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-sm text-gray-600">{issue.raised_by_name}</span>
+                    <span className="text-sm text-[var(--ink-700)]">{issue.raised_by_name}</span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-[var(--ink-700)]">
                       {ENTITY_ICON[issue.entity_type]} {issue.entity_name}
                     </span>
                   </td>
@@ -178,18 +181,18 @@ export function IssuesPage() {
                       issue.priority === 'urgent' ? 'bg-red-100 text-red-700' :
                       issue.priority === 'high'   ? 'bg-orange-100 text-orange-700' :
                       issue.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                                                    'bg-gray-100 text-gray-600'
+                                                    'bg-[var(--surface-2)] text-[var(--ink-700)]'
                     }`}>
                       {issue.priority.charAt(0).toUpperCase() + issue.priority.slice(1)}
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_STYLE[issue.status] || 'bg-gray-100 text-gray-600'}`}>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_STYLE[issue.status] || 'bg-[var(--surface-2)] text-[var(--ink-700)]'}`}>
                       {STATUS_LABEL[issue.status] || issue.status}
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-xs text-gray-400">{timeAgo(issue.updated_at)}</span>
+                    <span className="text-xs text-[var(--ink-400)]">{timeAgo(issue.updated_at)}</span>
                   </td>
                 </tr>
               ))}
@@ -202,10 +205,10 @@ export function IssuesPage() {
       <div className="md:hidden space-y-2">
         {loading ? (
           <div className="space-y-2">
-            {[1,2,3].map(i => <div key={i} className="bg-white border border-gray-100 rounded-xl p-4 h-20 animate-pulse" />)}
+            {[1,2,3].map(i => <div key={i} className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] p-4 h-20 animate-pulse" />)}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-12 text-gray-400">
+          <div className="text-center py-12 text-[var(--ink-400)]">
             <AlertCircle size={36} className="mx-auto mb-3 opacity-20" />
             <p className="text-sm">No issues found</p>
           </div>
@@ -213,18 +216,18 @@ export function IssuesPage() {
           <div
             key={issue.id}
             onClick={() => setOpenIssue(issue)}
-            className="bg-white border border-gray-100 rounded-xl p-4 cursor-pointer hover:border-gray-200 transition-colors"
+            className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] p-4 cursor-pointer hover:border-[var(--line-1)] transition-colors"
           >
             <div className="flex items-start justify-between gap-2 mb-2">
               <div className="flex items-start gap-2 flex-1 min-w-0">
                 <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${PRIORITY_DOT[issue.priority] || 'bg-gray-400'}`} />
-                <p className="text-sm font-medium text-gray-900 truncate">{issue.title}</p>
+                <p className="text-sm font-medium text-[var(--ink-900)] truncate">{issue.title}</p>
               </div>
-              <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${STATUS_STYLE[issue.status] || 'bg-gray-100 text-gray-600'}`}>
+              <span className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${STATUS_STYLE[issue.status] || 'bg-[var(--surface-2)] text-[var(--ink-700)]'}`}>
                 {STATUS_LABEL[issue.status] || issue.status}
               </span>
             </div>
-            <div className="flex items-center justify-between text-xs text-gray-400 pl-4">
+            <div className="flex items-center justify-between text-xs text-[var(--ink-400)] pl-4">
               <span>{issue.raised_by_name} · {ENTITY_ICON[issue.entity_type]} {issue.entity_name}</span>
               <span>{timeAgo(issue.updated_at)}</span>
             </div>

@@ -44,12 +44,12 @@ export function DeleteUserModal({ open, onClose, user, onSuccess }: Props) {
     <Modal open={open} onClose={onClose} title="Delete User" size="sm">
       <div className="space-y-4">
         {(isLastDirector || isSelf) ? (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-[var(--r-sm)] p-3 text-sm text-yellow-800">
             {isSelf ? "You cannot delete your own account." : "Cannot delete the last Director."}
           </div>
         ) : (
           <>
-            <div className="bg-red-50 border border-red-100 rounded-lg p-3">
+            <div className="bg-red-50 border border-red-100 rounded-[var(--r-sm)] p-3">
               <p className="text-sm font-medium text-red-800 mb-1">Deleting "{user.name}" will:</p>
               <ul className="text-sm text-red-700 space-y-0.5 list-disc list-inside">
                 <li>Permanently remove their account</li>
@@ -59,12 +59,12 @@ export function DeleteUserModal({ open, onClose, user, onSuccess }: Props) {
               <p className="text-xs text-red-600 mt-2 font-medium">This cannot be undone.</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1.5">
+              <label className="text-sm font-medium text-[var(--ink-700)] block mb-1.5">
                 Type <span className="font-mono font-semibold">"{user.name}"</span> to confirm
               </label>
               <input
                 type="text" value={typed} onChange={e => setTyped(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-red-400"
+                className="w-full border border-[var(--line-1)] rounded-[var(--r-sm)] px-3 py-2 text-sm focus:outline-none focus:border-red-400"
                 placeholder={user.name}
               />
             </div>
@@ -72,12 +72,12 @@ export function DeleteUserModal({ open, onClose, user, onSuccess }: Props) {
         )}
         <div className="flex justify-end gap-3">
           <button onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+            className="px-4 py-2 text-sm font-medium text-[var(--ink-700)] border border-[var(--line-1)] rounded-[var(--r-sm)] hover:bg-[var(--surface-2)] transition-colors">
             Cancel
           </button>
           {!isLastDirector && !isSelf && (
             <button onClick={handleDelete} disabled={!canDelete || loading}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:pointer-events-none">
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-[var(--r-sm)] hover:bg-red-600 transition-colors disabled:opacity-50 disabled:pointer-events-none">
               {loading && <LoadingSpinner size="sm" color="white" />} Delete Account
             </button>
           )}

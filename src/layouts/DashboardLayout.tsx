@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Users, CheckSquare, BarChart2, Calendar,
   Settings, Search, ChevronDown, User, LogOut,
   Home, MoreHorizontal, ListTodo, AlertCircle, Activity, MessageCircle,
-  Volume2, VolumeX, Download,
+  Volume2, VolumeX, Download, Smile, BellOff,
 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { useIssues } from '../hooks/useIssues'
@@ -22,24 +22,25 @@ import { LoadingSpinner } from '../shared/LoadingSpinner'
 import { useChat } from '../context/ChatContext'
 import { ChatBubble } from '../components/chat/ChatBubble'
 import { ChatDrawer } from '../components/chat/ChatDrawer'
+import { StatusEditor } from '../components/StatusEditor'
 
 function ChatNavButton() {
   const { openChat, totalUnread } = useChat()
   return (
     <button
       onClick={() => openChat()}
-      className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#141414] transition-colors"
+      className="relative p-2 rounded-[8px] hover:bg-[var(--surface-2)] transition-colors"
       aria-label="Open chat"
     >
       <MessageCircle
         size={18}
-        className={totalUnread > 0 ? 'text-[#0A5540] dark:text-[#22C55E]' : 'text-gray-500 dark:text-[#B3B3B3]'}
+        strokeWidth={1.8}
+        className={totalUnread > 0 ? 'text-[var(--primary)]' : 'text-[var(--ink-500)]'}
       />
       {totalUnread > 0 && (
         <>
-          {/* Pulsing ring */}
-          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-red-400 opacity-75 animate-ping" />
-          <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-0.5 leading-none">
+          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-[var(--danger)]/70 animate-ping" />
+          <span className="absolute -top-0.5 -right-0.5 bg-[var(--danger)] text-white text-[9px] font-semibold rounded-full min-w-[16px] h-4 flex items-center justify-center px-0.5 leading-none tabular-nums">
             {totalUnread > 9 ? '9+' : totalUnread}
           </span>
         </>
@@ -75,22 +76,23 @@ function NavItem({ to, icon: Icon, label, badge }: {
     <NavLink
       to={to}
       className={({ isActive }) =>
-        `group flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+        `relative group flex items-center gap-2 px-3 py-1.5 rounded-[8px] text-[13px] font-medium transition-all duration-200 ${
           isActive
-            ? 'bg-[#0A5540] dark:bg-[rgba(34,197,94,0.12)]'
-            : 'text-gray-500 dark:text-[#B3B3B3] hover:bg-[#0A5540] dark:hover:bg-[#0A5540] hover:text-white dark:hover:text-white'
+            ? 'text-[var(--primary)] bg-[var(--primary-50)] dark:bg-[var(--primary-100)]'
+            : 'text-[var(--ink-500)] hover:text-[var(--ink-900)] hover:bg-[var(--surface-2)]'
         }`
       }
     >
       {({ isActive }) => (
         <>
           <Icon
-            size={16}
-            className={isActive ? 'text-white dark:text-[#22C55E]' : 'text-inherit'}
+            size={15}
+            strokeWidth={isActive ? 2.2 : 1.8}
+            className={isActive ? 'text-[var(--primary)]' : 'text-inherit'}
           />
-          <span className={isActive ? 'text-white dark:text-[#22C55E]' : ''}>{label}</span>
+          <span>{label}</span>
           {badge != null && badge > 0 && (
-            <span className="ml-0.5 px-1.5 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded-full leading-none">
+            <span className="ml-0.5 px-1.5 py-[1px] text-[10px] font-semibold tabular-nums bg-[var(--danger)] text-white rounded-full leading-[1.3]">
               {badge > 9 ? '9+' : badge}
             </span>
           )}
@@ -105,6 +107,7 @@ export function DashboardLayout() {
   const { issues } = useIssues()
   const navigate = useNavigate()
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [showStatusEditor, setShowStatusEditor] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
   const [showMoreDrawer, setShowMoreDrawer] = useState(false)
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
@@ -151,7 +154,7 @@ export function DashboardLayout() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--surface-2)]">
         <LoadingSpinner size="lg" />
       </div>
     )
@@ -181,18 +184,18 @@ export function DashboardLayout() {
 
   return (
     <DashboardModalsCtx.Provider value={modalsCtx}>
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0B0F0C]">
+    <div className="min-h-screen bg-[var(--canvas)]">
 
       {/* ── Connection status banner ── */}
       {!isOnline && (
-        <div className="fixed top-0 left-0 right-0 z-[200] bg-amber-500 text-white text-xs font-medium py-2 flex items-center justify-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+        <div className="fixed top-0 left-0 right-0 z-[70] bg-amber-500 text-white text-xs font-medium py-2 flex items-center justify-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-[var(--surface-1)] animate-pulse" />
           Connection lost — data may be outdated. Reconnecting...
         </div>
       )}
 
       {/* ── Desktop Navbar ── */}
-      <header className="sticky top-0 z-40 h-14 bg-white dark:bg-[#000000]/90 dark:backdrop-blur-md border-b border-gray-200 dark:border-[#1F2937] hidden md:flex items-center px-6 gap-4">
+      <header className="sticky top-0 z-40 h-14 glass-strong border-b border-[var(--line-1)] shadow-[var(--shadow-xs)] hidden md:flex items-center px-8 gap-4">
         {/* Logo */}
         <NavLink to="/app/dashboard" className="flex items-center shrink-0 mr-2">
           <img src={logo} alt="G-Track" className="h-8 w-[130px] object-contain object-left" />
@@ -214,7 +217,7 @@ export function DashboardLayout() {
                 const { outcome } = await installPrompt.userChoice
                 if (outcome === 'accepted') setInstallPrompt(null)
               }}
-              className="hidden lg:flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-[#0A5540] text-white hover:bg-[#0A5540]/90 transition-colors"
+              className="hidden lg:flex items-center gap-1.5 text-[12px] font-medium px-3 py-1.5 rounded-[var(--r-sm)] bg-[var(--primary)] text-white hover:bg-[var(--primary-hi)] transition-colors shadow-[var(--shadow-sm)]"
               title="Install G-Track as an app"
             >
               <Download size={13} />
@@ -225,11 +228,11 @@ export function DashboardLayout() {
           {/* Search */}
           <button
             onClick={() => setShowSearch(true)}
-            className="hidden lg:flex items-center gap-2 text-sm text-gray-400 dark:text-[#6B7280] bg-gray-100 dark:bg-[#141414] border dark:border-[#1F2937] rounded-lg px-3 py-1.5 hover:bg-gray-200 dark:hover:bg-[#1F2937] transition-colors"
+            className="hidden lg:flex items-center gap-2.5 text-[13px] text-[var(--ink-500)] bg-[var(--surface-2)] dark:bg-[#141414] border border-[var(--line-1)] rounded-[8px] pl-3 pr-1.5 py-1.5 hover:border-[var(--line-2)] hover:text-[var(--ink-700)] transition-all duration-200 min-w-[220px]"
           >
-            <Search size={14} />
-            <span className="text-xs">Search...</span>
-            <span className="text-[11px] font-medium bg-gray-200 text-gray-500 rounded px-1 py-0.5">⌘K</span>
+            <Search size={14} strokeWidth={1.8} />
+            <span className="flex-1 text-left">Search the workspace</span>
+            <span className="text-[10px] font-mono tabular-nums font-medium bg-[var(--surface-1)] dark:bg-[#0D0D0D] border border-[var(--line-1)] text-[var(--ink-500)] rounded-[4px] px-1.5 py-0.5">⌘K</span>
           </button>
 
           {/* Notification bell + panel (self-contained) */}
@@ -243,12 +246,12 @@ export function DashboardLayout() {
               setSoundOn(newVal)
               setSoundEnabled(newVal)
             }}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#141414] transition-colors"
+            className="p-2.5 rounded-[var(--r-sm)] hover:bg-[var(--surface-2)] dark:hover:bg-[#141414] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
             title={soundOn ? 'Mute notifications' : 'Unmute notifications'}
           >
             {soundOn
-              ? <Volume2 className="w-4 h-4 text-gray-600 dark:text-[#B3B3B3]" />
-              : <VolumeX className="w-4 h-4 text-gray-400 dark:text-[#6B7280]" />
+              ? <Volume2 className="w-4 h-4 text-[var(--ink-700)] dark:text-[#B3B3B3]" />
+              : <VolumeX className="w-4 h-4 text-[var(--ink-400)] dark:text-[#6B7280]" />
             }
           </button>
 
@@ -259,59 +262,82 @@ export function DashboardLayout() {
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(p => !p)}
-              className="flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-gray-100 transition-colors"
+              className="flex items-center gap-2 rounded-[10px] pl-1 pr-2.5 py-1 border border-transparent hover:border-[var(--line-1)] hover:bg-[var(--surface-2)] transition-all duration-200"
             >
               <Avatar name={currentUser.name} size="sm" status={currentUser.user_status} imageUrl={currentUser.avatar_url} />
-              <span className="text-sm font-medium text-gray-700 hidden lg:block">{currentUser.name.split(' ')[0]}</span>
-              <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-[#0A5540]/10 dark:bg-[#22C55E]/10 text-[#0A5540] dark:text-[#22C55E]">
+              <span className="text-[13px] font-medium text-[var(--ink-700)] hidden lg:block">{currentUser.name.split(' ')[0]}</span>
+              <span className="text-[9px] font-mono font-semibold tracking-[0.08em] px-1.5 py-0.5 rounded-[4px] bg-[var(--primary-50)] text-[var(--primary)]">
                 {ROLE_BADGE[currentUser.role]}
               </span>
-              <ChevronDown size={13} className="text-gray-400 hidden lg:block" />
+              <ChevronDown size={12} strokeWidth={2} className="text-[var(--ink-400)] hidden lg:block" />
             </button>
 
             {showUserMenu && (
-              <div className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-[#0D0D0D] border border-gray-200 dark:border-[#1F2937] rounded-xl shadow-xl dark:shadow-[0_8px_40px_rgba(0,0,0,0.8)] z-50 overflow-hidden py-1">
-                <div className="px-4 py-3 border-b border-gray-100 dark:border-[#1F2937]">
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{currentUser.name}</p>
-                  <p className="text-xs text-gray-400 dark:text-[#6B7280] truncate">{currentUser.email}</p>
+              <div className="absolute right-0 top-full mt-1 w-60 max-w-[calc(100vw-1rem)] bg-[var(--surface-1)] dark:bg-[#0D0D0D] border border-[var(--line-1)] dark:border-[#1F2937] rounded-[var(--r-lg)] shadow-xl dark:shadow-[0_8px_40px_rgba(0,0,0,0.8)] z-50 overflow-hidden py-1">
+                <div className="px-4 py-3 border-b border-[var(--line-1)] dark:border-[#1F2937]">
+                  <p className="text-sm font-semibold text-[var(--ink-900)] dark:text-[var(--ink-900)]">{currentUser.name}</p>
+                  <p className="text-xs text-[var(--ink-400)] dark:text-[#6B7280] truncate">{currentUser.email}</p>
                   {currentUser.department && (
-                    <p className="text-xs text-gray-400 dark:text-[#6B7280] mt-0.5">{currentUser.department}</p>
+                    <p className="text-xs text-[var(--ink-400)] dark:text-[#6B7280] mt-0.5">{currentUser.department}</p>
                   )}
                 </div>
+
+                {/* Status row */}
+                <button
+                  onClick={() => { setShowUserMenu(false); setShowStatusEditor(true) }}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 border-b border-[var(--line-1)] dark:border-[#1F2937] hover:bg-[var(--surface-2)] dark:hover:bg-[#141414] transition-colors text-left"
+                >
+                  <span className="text-base leading-none shrink-0">
+                    {currentUser.status_emoji || <Smile size={15} className="text-[var(--ink-400)]" />}
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-[12.5px] text-[var(--ink-900)] truncate">
+                      {currentUser.status_text || 'Set a status'}
+                    </span>
+                    {currentUser.dnd_until && new Date(currentUser.dnd_until).getTime() > Date.now() && (
+                      <span className="flex items-center gap-1 text-[10.5px] text-[var(--warning)] font-semibold mt-0.5">
+                        <BellOff size={10} /> DND until {new Date(currentUser.dnd_until).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                      </span>
+                    )}
+                  </span>
+                </button>
+
                 <div className="p-1">
                   <button onClick={() => { navigate('/app/profile'); setShowUserMenu(false) }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 dark:text-[#B3B3B3] hover:bg-gray-50 dark:hover:bg-[#141414] rounded-lg transition-colors">
-                    <User size={14} className="text-gray-400 dark:text-[#6B7280]" /> My Profile
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[var(--ink-700)] dark:text-[#B3B3B3] hover:bg-[var(--surface-2)] dark:hover:bg-[#141414] rounded-[var(--r-sm)] transition-colors">
+                    <User size={14} className="text-[var(--ink-400)] dark:text-[#6B7280]" /> My Profile
                   </button>
                   <button onClick={() => { navigate('/app/todos'); setShowUserMenu(false) }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 dark:text-[#B3B3B3] hover:bg-gray-50 dark:hover:bg-[#141414] rounded-lg transition-colors">
-                    <ListTodo size={14} className="text-gray-400 dark:text-[#6B7280]" /> My To-Do
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[var(--ink-700)] dark:text-[#B3B3B3] hover:bg-[var(--surface-2)] dark:hover:bg-[#141414] rounded-[var(--r-sm)] transition-colors">
+                    <ListTodo size={14} className="text-[var(--ink-400)] dark:text-[#6B7280]" /> My To-Do
                   </button>
                   {isDirector && (
                     <button onClick={() => { navigate('/app/settings'); setShowUserMenu(false) }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 dark:text-[#B3B3B3] hover:bg-gray-50 dark:hover:bg-[#141414] rounded-lg transition-colors">
-                      <Settings size={14} className="text-gray-400 dark:text-[#6B7280]" /> Settings
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[var(--ink-700)] dark:text-[#B3B3B3] hover:bg-[var(--surface-2)] dark:hover:bg-[#141414] rounded-[var(--r-sm)] transition-colors">
+                      <Settings size={14} className="text-[var(--ink-400)] dark:text-[#6B7280]" /> Settings
                     </button>
                   )}
-                  <div className="border-t border-gray-100 dark:border-[#1F2937] my-1" />
+                  <div className="border-t border-[var(--line-1)] dark:border-[#1F2937] my-1" />
                   <button onClick={() => { setShowUserMenu(false); setShowSignOutConfirm(true) }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-lg transition-colors">
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-[var(--r-sm)] transition-colors">
                     <LogOut size={14} /> Sign Out
                   </button>
                 </div>
               </div>
             )}
+
+            <StatusEditor open={showStatusEditor} onClose={() => setShowStatusEditor(false)} anchor="top" />
           </div>
         </div>
       </header>
 
       {/* ── Mobile top bar ── */}
-      <header className="md:hidden sticky top-0 z-40 h-14 bg-white dark:bg-[#000000]/90 dark:backdrop-blur-md border-b border-gray-200 dark:border-[#1F2937] flex items-center px-4 justify-between">
+      <header className="md:hidden sticky top-0 z-40 h-14 bg-[var(--surface-1)] dark:bg-[#000000]/90 dark:backdrop-blur-md border-b border-[var(--line-1)] dark:border-[#1F2937] flex items-center px-4 justify-between">
         <div className="flex items-center">
           <img src={logo} alt="G-Track" className="h-8 w-[130px] object-contain object-left" />
         </div>
         <div className="flex items-center gap-1.5">
-          <button onClick={() => setShowSearch(true)} className="p-2 text-gray-500">
+          <button onClick={() => setShowSearch(true)} className="p-2 text-[var(--ink-500)]">
             <Search size={18} />
           </button>
           <NotificationPanel />
@@ -320,12 +346,12 @@ export function DashboardLayout() {
       </header>
 
       {/* ── Page content ── */}
-      <main className="pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+      <main className="pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0 animate-reveal-up">
         <Outlet />
       </main>
 
       {/* ── Mobile bottom tab bar ── */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-[#000000] border-t border-gray-200 dark:border-[#1F2937] flex items-center justify-around px-1 pb-[env(safe-area-inset-bottom)]" style={{ minHeight: '4rem' }}>
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-[var(--surface-1)] dark:bg-[#000000] border-t border-[var(--line-1)] dark:border-[#1F2937] flex items-center justify-around px-1 pb-[env(safe-area-inset-bottom)]" style={{ minHeight: '4rem' }}>
         {isMember ? (
           // Member: Home, Tasks, Analytics, Calendar
           <>
@@ -336,7 +362,7 @@ export function DashboardLayout() {
               { to: '/app/calendar',  icon: Calendar,    label: 'Calendar' },
             ].map(({ to, icon: Icon, label }) => (
               <NavLink key={to} to={to} className={({ isActive }) =>
-                `flex flex-col items-center gap-0.5 px-2 py-2 rounded-lg transition-colors ${isActive ? 'text-[#0A5540]' : 'text-gray-400 hover:bg-[#0A5540] hover:text-white'}`
+                `flex flex-col items-center gap-0.5 px-2 py-2 rounded-[var(--r-sm)] transition-colors ${isActive ? 'text-[var(--primary)]' : 'text-[var(--ink-400)] hover:bg-[var(--primary)] hover:text-white'}`
               }>
                 <Icon size={21} className="text-inherit" />
                 <span className="text-[10px] font-medium">{label}</span>
@@ -353,7 +379,7 @@ export function DashboardLayout() {
               { to: '/app/analytics', icon: BarChart2,    label: 'Analytics'},
             ].map(({ to, icon: Icon, label, badge }) => (
               <NavLink key={to} to={to} className={({ isActive }) =>
-                `relative flex flex-col items-center gap-0.5 px-2 py-2 rounded-lg transition-colors ${isActive ? 'text-[#0A5540]' : 'text-gray-400 hover:bg-[#0A5540] hover:text-white'}`
+                `relative flex flex-col items-center gap-0.5 px-2 py-2 rounded-[var(--r-sm)] transition-colors ${isActive ? 'text-[var(--primary)]' : 'text-[var(--ink-400)] hover:bg-[var(--primary)] hover:text-white'}`
               }>
                 <Icon size={21} className="text-inherit" />
                 {badge != null && badge > 0 && (
@@ -366,7 +392,7 @@ export function DashboardLayout() {
             ))}
             <button
               onClick={() => setShowMoreDrawer(true)}
-              className="flex flex-col items-center gap-0.5 px-2 py-2 text-gray-400"
+              className="flex flex-col items-center gap-0.5 px-2 py-2 text-[var(--ink-400)]"
             >
               <MoreHorizontal size={21} />
               <span className="text-[10px] font-medium">More</span>
@@ -378,34 +404,34 @@ export function DashboardLayout() {
       {/* ── Mobile "More" drawer ── */}
       {showMoreDrawer && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-end md:hidden" onClick={() => setShowMoreDrawer(false)}>
-          <div className="bg-white dark:bg-[#0D0D0D] w-full rounded-t-2xl p-5 space-y-1 animate-slide-up border-t dark:border-[#1F2937]" onClick={e => e.stopPropagation()}>
+          <div className="bg-[var(--surface-1)] dark:bg-[#0D0D0D] w-full rounded-t-2xl p-5 space-y-1 animate-slide-up border-t dark:border-[#1F2937]" onClick={e => e.stopPropagation()}>
             <div className="w-10 h-1 bg-gray-200 dark:bg-[#1F2937] rounded-full mx-auto mb-4" />
             {!isMember && (
               <NavLink to="/app/team" onClick={() => setShowMoreDrawer(false)}
-                className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${isActive ? 'bg-[#0A5540] text-white' : 'text-gray-700 hover:bg-[#0A5540] hover:text-white'}`}>
+                className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-[var(--r-md)] transition-colors ${isActive ? 'bg-[var(--primary)] text-white' : 'text-[var(--ink-700)] hover:bg-[var(--primary)] hover:text-white'}`}>
                 <Users size={18} /> Team
               </NavLink>
             )}
             <NavLink to="/app/todos" onClick={() => setShowMoreDrawer(false)}
-              className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${isActive ? 'bg-[#0A5540] text-white' : 'text-gray-700 hover:bg-[#0A5540] hover:text-white'}`}>
+              className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-[var(--r-md)] transition-colors ${isActive ? 'bg-[var(--primary)] text-white' : 'text-[var(--ink-700)] hover:bg-[var(--primary)] hover:text-white'}`}>
               <ListTodo size={18} /> My To-Do
             </NavLink>
             <NavLink to="/app/calendar" onClick={() => setShowMoreDrawer(false)}
-              className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${isActive ? 'bg-[#0A5540] text-white' : 'text-gray-700 hover:bg-[#0A5540] hover:text-white'}`}>
+              className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-[var(--r-md)] transition-colors ${isActive ? 'bg-[var(--primary)] text-white' : 'text-[var(--ink-700)] hover:bg-[var(--primary)] hover:text-white'}`}>
               <Calendar size={18} /> Calendar
             </NavLink>
             <NavLink to="/app/profile" onClick={() => setShowMoreDrawer(false)}
-              className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${isActive ? 'bg-[#0A5540] text-white' : 'text-gray-700 hover:bg-[#0A5540] hover:text-white'}`}>
+              className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-[var(--r-md)] transition-colors ${isActive ? 'bg-[var(--primary)] text-white' : 'text-[var(--ink-700)] hover:bg-[var(--primary)] hover:text-white'}`}>
               <User size={18} /> My Profile
             </NavLink>
             {isDirector && (
               <NavLink to="/app/settings" onClick={() => setShowMoreDrawer(false)}
-                className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${isActive ? 'bg-[#0A5540] text-white' : 'text-gray-700 hover:bg-[#0A5540] hover:text-white'}`}>
+                className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-[var(--r-md)] transition-colors ${isActive ? 'bg-[var(--primary)] text-white' : 'text-[var(--ink-700)] hover:bg-[var(--primary)] hover:text-white'}`}>
                 <Settings size={18} /> Settings
               </NavLink>
             )}
             <button onClick={() => { setShowSearch(true); setShowMoreDrawer(false) }}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors">
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-[var(--r-lg)] text-[var(--ink-700)] hover:bg-[var(--surface-2)] transition-colors">
               <Search size={18} /> Search
             </button>
             {installPrompt && (
@@ -416,14 +442,14 @@ export function DashboardLayout() {
                   const { outcome } = await installPrompt.userChoice
                   if (outcome === 'accepted') setInstallPrompt(null)
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[#0A5540] dark:text-[#22C55E] hover:bg-[#0A5540]/10 transition-colors font-medium"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-[var(--r-md)] text-[var(--primary)] hover:bg-[var(--primary-50)] transition-colors font-medium"
               >
                 <Download size={18} /> Install App
               </button>
             )}
-            <div className="border-t border-gray-100 dark:border-[#1F2937] my-1 pt-1">
+            <div className="border-t border-[var(--line-1)] dark:border-[#1F2937] my-1 pt-1">
               <button onClick={() => { setShowMoreDrawer(false); setShowSignOutConfirm(true) }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-[var(--r-lg)] text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
                 <LogOut size={18} /> Sign Out
               </button>
             </div>

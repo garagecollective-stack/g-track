@@ -33,21 +33,21 @@ export function EmojiPicker({ onReact, isOwn }: Props) {
       <button
         onClick={() => setOpen(p => !p)}
         title="React"
-        className="p-1 rounded-lg bg-white dark:bg-[#1F2937] border border-gray-100 dark:border-[#374151] text-gray-400 dark:text-[#6B7280] hover:text-gray-700 dark:hover:text-[#B3B3B3] shadow-sm transition-colors"
+        className="p-1 rounded-[var(--r-sm)] bg-[var(--surface-1)] dark:bg-[#1F2937] border border-[var(--line-1)] dark:border-[#374151] text-[var(--ink-400)] dark:text-[#6B7280] hover:text-[var(--ink-700)] dark:hover:text-[#B3B3B3] shadow-sm transition-colors"
       >
         <Smile size={11} />
       </button>
 
       {open && (
-        <div className={`absolute bottom-full mb-1 z-50 bg-white dark:bg-[#1F2937] border border-gray-100 dark:border-[#374151] rounded-xl shadow-xl p-1.5 ${
+        <div className={`absolute bottom-full mb-1 z-50 bg-[var(--surface-1)] dark:bg-[#1F2937] border border-[var(--line-1)] dark:border-[#374151] rounded-[var(--r-lg)] shadow-xl p-1.5 max-w-[calc(100vw-2rem)] ${
           isOwn ? 'right-0' : 'left-0'
         }`}>
-          <div className="grid grid-cols-6 gap-0.5">
+          <div className="grid grid-cols-6 gap-1">
             {EMOJIS.map(emoji => (
               <button
                 key={emoji}
                 onClick={() => handleSelect(emoji)}
-                className="w-7 h-7 flex items-center justify-center text-base rounded-lg hover:bg-gray-100 dark:hover:bg-[#374151] transition-colors"
+                className="w-7 h-7 flex items-center justify-center text-base rounded-[var(--r-sm)] hover:bg-[var(--surface-2)] dark:hover:bg-[#374151] transition-colors"
               >
                 {emoji}
               </button>

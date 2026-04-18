@@ -35,7 +35,7 @@ export function OverdueAlertBanner() {
 
   return (
     <>
-      <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 overflow-hidden">
+      <div className="mb-5 rounded-[var(--r-lg)] border border-amber-200 bg-amber-50 overflow-hidden">
         {/* Collapsed header */}
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
@@ -91,7 +91,7 @@ export function OverdueAlertBanner() {
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-semibold text-gray-900 truncate">{alert.entity_name}</span>
+                      <span className="text-sm font-semibold text-[var(--ink-900)] truncate">{alert.entity_name}</span>
                       <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-200 text-amber-800">
                         {alert.entity_type}
                       </span>
@@ -101,9 +101,9 @@ export function OverdueAlertBanner() {
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
                       {alert.department && (
-                        <span className="text-xs text-gray-500">{alert.department}</span>
+                        <span className="text-xs text-[var(--ink-500)]">{alert.department}</span>
                       )}
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-[var(--ink-400)]">
                         Due {formatDateShort(alert.due_date)}
                       </span>
                     </div>
@@ -113,14 +113,14 @@ export function OverdueAlertBanner() {
                   <div className="flex items-center gap-1 shrink-0">
                     <button
                       onClick={() => handleNavigate(alert)}
-                      className="p-1.5 text-amber-600 hover:text-amber-900 hover:bg-amber-200 rounded-lg transition-colors"
+                      className="p-2.5 text-amber-600 hover:text-amber-900 hover:bg-amber-200 rounded-[var(--r-sm)] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                       title="View"
                     >
                       <ArrowRight size={14} />
                     </button>
                     <button
                       onClick={() => handleDismiss(alert.id)}
-                      className="p-1.5 text-amber-500 hover:text-amber-800 hover:bg-amber-200 rounded-lg transition-colors"
+                      className="p-2.5 text-amber-500 hover:text-amber-800 hover:bg-amber-200 rounded-[var(--r-sm)] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                       title="Dismiss"
                     >
                       <X size={14} />

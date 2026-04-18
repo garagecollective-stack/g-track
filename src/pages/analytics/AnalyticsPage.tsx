@@ -8,15 +8,15 @@ import { useTasks } from '../../hooks/useTasks'
 import { useProjects } from '../../hooks/useProjects'
 import { isOverdue } from '../../utils/helpers'
 
-const COLORS = { backlog: '#F97316', inProgress: '#3b82f6', done: '#22c55e' }
-const tooltipStyle = { background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', fontFamily: 'DM Sans' }
+const COLORS = { backlog: '#F97316', inProgress: '#3b82f6', done: '#16a273' }
+const tooltipStyle = { background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', fontFamily: 'IBM Plex Sans' }
 
-function StatCard({ label, value, sub, color = 'text-gray-900' }: { label: string; value: number; sub?: string; color?: string }) {
+function StatCard({ label, value, sub, color = 'text-[var(--ink-900)]' }: { label: string; value: number; sub?: string; color?: string }) {
   return (
-    <div className="bg-white border border-gray-100 rounded-xl p-5">
-      <p className="text-sm text-gray-500">{label}</p>
-      <p className={`text-3xl font-bold mt-2 ${color}`} style={{ fontFamily: 'DM Mono' }}>{value}</p>
-      {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+    <div className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] p-5">
+      <p className="text-sm text-[var(--ink-500)]">{label}</p>
+      <p className={`text-2xl md:text-3xl font-bold mt-2 ${color}`} style={{ fontFamily: 'IBM Plex Mono' }}>{value}</p>
+      {sub && <p className="text-xs text-[var(--ink-400)] mt-1">{sub}</p>}
     </div>
   )
 }
@@ -37,8 +37,7 @@ export function AnalyticsPage() {
     const depts: Record<string, { backlog: number; inProgress: number; done: number; onHold: number }> = {}
     tasks.forEach(t => {
       if (!depts[t.department]) depts[t.department] = { backlog: 0, inProgress: 0, done: 0, onHold: 0 }
-      const status = t.status as string
-      if (status in depts[t.department]) (depts[t.department] as any)[status]++
+      depts[t.department][t.status]++
     })
     return Object.entries(depts).map(([name, counts]) => ({ name: name.length > 8 ? name.slice(0, 8) + '…' : name, ...counts }))
   }, [tasks])
@@ -59,10 +58,10 @@ export function AnalyticsPage() {
   const title = currentUser?.role === 'director' ? 'Company' : currentUser?.department || 'Your'
 
   return (
-    <div className="px-4 py-5 md:px-6 md:py-8 max-w-[1280px] mx-auto">
+    <div className="px-4 py-5 md:px-6 md:py-8 max-w-[1440px] mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900" style={{ letterSpacing: '-0.5px' }}>Analytics</h1>
-        <p className="text-sm text-gray-500 mt-1">Performance overview across {title}</p>
+        <h1 className="text-2xl font-bold text-[var(--ink-900)]" style={{ letterSpacing: '-0.5px' }}>Analytics</h1>
+        <p className="text-sm text-[var(--ink-500)] mt-1">Performance overview across {title}</p>
       </div>
 
       {/* Stat cards */}
@@ -74,17 +73,17 @@ export function AnalyticsPage() {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
         {/* Chart 1: Tasks by department */}
-        <div className="bg-white border border-gray-100 rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">Tasks by Department</h3>
+        <div className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] p-5">
+          <h3 className="text-sm font-semibold text-[var(--ink-900)] mb-4">Tasks by Department</h3>
           {taskLoading ? (
-            <div className="skeleton h-[200px] md:h-[280px] rounded-lg" />
+            <div className="skeleton h-[200px] md:h-[280px] rounded-[var(--r-sm)]" />
           ) : byDept.length === 0 ? (
-            <div className="flex items-center justify-center h-[200px] text-sm text-gray-400">No data</div>
+            <div className="flex items-center justify-center h-[200px] text-sm text-[var(--ink-400)]">No data</div>
           ) : (
             <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={byDept} style={{ fontFamily: 'DM Sans' }}>
+              <BarChart data={byDept} style={{ fontFamily: 'IBM Plex Sans' }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} />
                 <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} />
@@ -99,33 +98,36 @@ export function AnalyticsPage() {
         </div>
 
         {/* Chart 2: Status distribution */}
-        <div className="bg-white border border-gray-100 rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">Status Distribution</h3>
+        <div className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] p-5">
+          <h3 className="text-sm font-semibold text-[var(--ink-900)] mb-4">Status Distribution</h3>
           {taskLoading ? (
-            <div className="skeleton h-[200px] md:h-[280px] rounded-lg" />
+            <div className="skeleton h-[200px] md:h-[280px] rounded-[var(--r-sm)]" />
           ) : (
             <ResponsiveContainer width="100%" height={280}>
-              <PieChart style={{ fontFamily: 'DM Sans' }}>
+              <PieChart style={{ fontFamily: 'IBM Plex Sans' }}>
                 <Pie data={statusDist} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value">
                   {statusDist.map((_, i) => (
                     <Cell key={i} fill={[COLORS.backlog, COLORS.inProgress, COLORS.done][i]} />
                   ))}
                 </Pie>
                 <Tooltip contentStyle={tooltipStyle} />
-                <Legend wrapperStyle={{ fontSize: 12 }} formatter={(value, entry: any) => `${value} (${entry.payload.value})`} />
+                <Legend
+                  wrapperStyle={{ fontSize: 12 }}
+                  formatter={(value, entry) => `${value} (${((entry as { payload?: { value?: number } })?.payload?.value) ?? 0})`}
+                />
               </PieChart>
             </ResponsiveContainer>
           )}
         </div>
 
         {/* Chart 3: Project progress */}
-        <div className="bg-white border border-gray-100 rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">Project Progress</h3>
+        <div className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] p-5">
+          <h3 className="text-sm font-semibold text-[var(--ink-900)] mb-4">Project Progress</h3>
           {projectProgress.length === 0 ? (
-            <div className="flex items-center justify-center h-[200px] text-sm text-gray-400">No data</div>
+            <div className="flex items-center justify-center h-[200px] text-sm text-[var(--ink-400)]">No data</div>
           ) : (
             <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={projectProgress} layout="vertical" style={{ fontFamily: 'DM Sans' }}>
+              <BarChart data={projectProgress} layout="vertical" style={{ fontFamily: 'IBM Plex Sans' }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
                 <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11, fill: '#6b7280' }} />
                 <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: '#6b7280' }} width={80} />

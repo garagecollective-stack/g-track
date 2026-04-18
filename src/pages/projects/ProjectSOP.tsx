@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Pencil } from 'lucide-react'
+import { Pencil, FileText } from 'lucide-react'
 import { useApp } from '../../context/AppContext'
 import { useProjects } from '../../hooks/useProjects'
 import { useToast } from '../../hooks/useToast'
@@ -32,13 +32,16 @@ export function ProjectSOP({ projectId, sop }: Props) {
   }
 
   return (
-    <div className="bg-white border border-gray-100 rounded-xl p-5">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-gray-900">Standard Operating Procedure</h3>
+    <div className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] p-5 shadow-[var(--shadow-xs)]">
+      <div className="flex items-center justify-between mb-4 pb-3 border-b border-[var(--line-1)]">
+        <div>
+          <span className="eyebrow">— Playbook</span>
+          <h3 className="text-[15px] font-semibold text-[var(--ink-900)] mt-0.5 font-display tracking-[-0.01em]">Standard Operating Procedure</h3>
+        </div>
         {canEdit && !editing && (
           <button onClick={() => setEditing(true)}
-            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700">
-            <Pencil size={14} /> Edit
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] font-medium text-[var(--ink-500)] hover:text-[var(--ink-900)] hover:bg-[var(--surface-2)] rounded-[var(--r-sm)] transition-colors">
+            <Pencil size={13} strokeWidth={1.8} /> Edit
           </button>
         )}
       </div>
@@ -48,27 +51,32 @@ export function ProjectSOP({ projectId, sop }: Props) {
           <textarea
             value={value}
             onChange={e => setValue(e.target.value)}
-            rows={10}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-[#0A5540] focus:ring-2 focus:ring-[#0A5540]/10 resize-vertical"
+            rows={12}
+            className="w-full border border-[var(--line-1)] rounded-[var(--r-sm)] px-3 py-2.5 text-[13px] text-[var(--ink-900)] bg-[var(--surface-1)] focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 resize-vertical font-mono leading-relaxed transition-colors"
             placeholder="Enter step-by-step operating procedure..."
           />
-          <div className="flex justify-end gap-3 mt-3">
+          <div className="flex justify-end gap-2 mt-3">
             <button onClick={() => { setEditing(false); setValue(sop || '') }}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+              className="btn-secondary">
               Cancel
             </button>
             <button onClick={handleSave} disabled={saving}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0A5540] rounded-lg hover:bg-[#0d6b51] transition-colors disabled:opacity-70">
+              className="btn-primary inline-flex items-center gap-2 disabled:opacity-70">
               {saving && <LoadingSpinner size="sm" color="white" />} Save
             </button>
           </div>
         </div>
       ) : sop ? (
-        <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans leading-relaxed">{sop}</pre>
+        <pre className="text-[13px] text-[var(--ink-700)] whitespace-pre-wrap font-sans leading-relaxed">{sop}</pre>
       ) : (
-        <p className="text-sm text-gray-400 text-center py-8">
-          No SOP defined yet.{canEdit && ' Click Edit to add one.'}
-        </p>
+        <div className="text-center py-10">
+          <div className="mx-auto w-10 h-10 rounded-full bg-[var(--surface-2)] flex items-center justify-center mb-2.5">
+            <FileText size={16} strokeWidth={1.8} className="text-[var(--ink-400)]" />
+          </div>
+          <p className="text-[13px] text-[var(--ink-400)]">
+            No SOP defined yet.{canEdit && ' Click Edit to add one.'}
+          </p>
+        </div>
       )}
     </div>
   )

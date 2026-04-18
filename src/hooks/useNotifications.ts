@@ -2,6 +2,17 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useApp } from '../context/AppContext'
 import { playNotificationSound, isSoundEnabled } from '../services/notificationSound'
+import { triggerPushNotification } from '../services/pushNotifications'
+
+function urlForNotif(n: { related_type: string | null; related_id: string | null }): string | undefined {
+  if (!n.related_id) return '/app/dashboard'
+  switch (n.related_type) {
+    case 'task':    return `/app/tasks?highlight=${n.related_id}`
+    case 'project': return `/app/projects/${n.related_id}`
+    case 'issue':   return `/app/issues?open=${n.related_id}`
+    default:        return '/app/dashboard'
+  }
+}
 
 export interface Notification {
   id: string
@@ -86,16 +97,22 @@ export function useNotifications() {
           filter: `user_id=eq.${currentUser.id}`,
         },
         (payload) => {
-          setNotifications(prev => [payload.new as Notification, ...prev])
-          // Play sound based on notification type
+          const notif = payload.new as Notification
+          setNotifications(prev => [notif, ...prev])
+
+          const urgent = notif.type === 'issue' || notif.type === 'overdue'
+
+          // Sound — always tries; internal gates (sound-off, DND, audio not unlocked) silence it
           if (isSoundEnabled()) {
-            const notif = payload.new as Notification
-            if (notif.type === 'issue' || notif.type === 'overdue') {
-              playNotificationSound('urgent')
-            } else {
-              playNotificationSound('default')
-            }
+            playNotificationSound(urgent ? 'urgent' : 'default')
           }
+
+          // OS-level notification (Windows Action Center / macOS Notification Center)
+          // Only fires when tab is hidden or browser unfocused — the in-app toast handles the focused case
+          triggerPushNotification(notif.title, notif.message, urlForNotif(notif), {
+            tag: `notif-${notif.id}`,
+            urgent,
+          })
         }
       )
       .subscribe()

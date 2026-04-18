@@ -25,16 +25,16 @@ export function BottomSheet({ open, onClose, title, children }: Props) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/40 z-50 flex items-end"
+      className="fixed inset-0 bg-black/50 backdrop-blur-[2px] z-50 flex items-end animate-fade-in"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="bg-white w-full rounded-t-2xl shadow-xl max-h-[90vh] overflow-y-auto animate-slide-up">
-        <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-4" />
+      <div className="bg-[var(--surface-1)] border-t border-[var(--line-1)] w-full rounded-t-[var(--r-xl)] shadow-[var(--shadow-xl)] max-h-[90vh] overflow-y-auto animate-slide-up" role="dialog" aria-modal="true">
+        <div className="w-10 h-1 bg-[var(--line-2)] rounded-full mx-auto mt-3 mb-4" />
         {title && (
-          <div className="flex items-center justify-between px-6 py-3 border-b border-gray-100">
-            <h2 className="text-base font-semibold text-gray-900">{title}</h2>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg">
-              <X size={18} />
+          <div className="flex items-center justify-between px-6 py-3 border-b border-[var(--line-1)]">
+            <h2 className="font-display text-[16px] font-semibold text-[var(--ink-900)] tracking-[-0.01em]">{title}</h2>
+            <button onClick={onClose} className="text-[var(--ink-400)] hover:text-[var(--ink-900)] p-2 rounded-[var(--r-sm)] min-w-[40px] min-h-[40px] flex items-center justify-center hover:bg-[var(--surface-2)] transition-colors">
+              <X size={16} strokeWidth={1.8} />
             </button>
           </div>
         )}

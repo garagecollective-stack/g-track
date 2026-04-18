@@ -4,16 +4,16 @@ interface Props {
 }
 
 function SkeletonLine({ width = 'w-full', height = 'h-4' }: { width?: string; height?: string }) {
-  return <div className={`skeleton ${width} ${height} rounded`} />
+  return <div className={`skeleton ${width} ${height} rounded-[var(--r-xs)]`} />
 }
 
 export function SkeletonCard({ count = 5, height }: Props) {
   return (
     <>
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="bg-white border border-gray-100 rounded-xl p-5">
+        <div key={i} className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] p-5">
           {height ? (
-            <div className={`skeleton w-full ${height} rounded`} />
+            <div className={`skeleton w-full ${height} rounded-[var(--r-sm)]`} />
           ) : (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -41,8 +41,8 @@ export function SkeletonRow({ count = 5 }: { count?: number }) {
   return (
     <>
       {Array.from({ length: count }).map((_, i) => (
-        <tr key={i} className="border-b border-gray-100">
-          <td className="p-3"><div className="skeleton w-4 h-4 rounded" /></td>
+        <tr key={i} className="border-b border-[var(--line-1)]">
+          <td className="p-3"><div className="skeleton w-4 h-4 rounded-[var(--r-xs)]" /></td>
           <td className="p-3"><SkeletonLine width="w-48" height="h-4" /></td>
           <td className="p-3"><SkeletonLine width="w-24" height="h-4" /></td>
           <td className="p-3">

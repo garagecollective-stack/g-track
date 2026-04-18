@@ -13,12 +13,10 @@ export interface IssueEntity {
   name: string
 }
 
-interface Entity extends IssueEntity {}
-
 interface Props {
   open: boolean
   onClose: () => void
-  presetEntity?: Entity
+  presetEntity?: IssueEntity
 }
 
 export function RaiseIssueModal({ open, onClose, presetEntity }: Props) {
@@ -79,9 +77,9 @@ export function RaiseIssueModal({ open, onClose, presetEntity }: Props) {
       {/* Related to */}
       {presetEntity && (
         <div>
-          <label className="block text-xs font-semibold text-gray-700 mb-1.5">Related to</label>
-          <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700">
-            <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-200 text-gray-600">
+          <label className="block text-xs font-semibold text-[var(--ink-700)] mb-1.5">Related to</label>
+          <div className="flex items-center gap-2 px-3 py-2 bg-[var(--surface-2)] border border-[var(--line-1)] rounded-[var(--r-lg)] text-sm text-[var(--ink-700)]">
+            <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-200 text-[var(--ink-700)]">
               {presetEntity.type}
             </span>
             <span className="font-medium truncate">{presetEntity.name}</span>
@@ -91,7 +89,7 @@ export function RaiseIssueModal({ open, onClose, presetEntity }: Props) {
 
       {/* Title */}
       <div>
-        <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+        <label className="block text-xs font-semibold text-[var(--ink-700)] mb-1.5">
           Issue Title <span className="text-red-500">*</span>
         </label>
         <input
@@ -99,8 +97,8 @@ export function RaiseIssueModal({ open, onClose, presetEntity }: Props) {
           value={title}
           onChange={e => { setTitle(e.target.value); setErrors(p => ({ ...p, title: '' })) }}
           placeholder="Brief summary of the issue..."
-          className={`w-full text-sm border rounded-xl px-3 py-2.5 focus:outline-none focus:border-[#0A5540] transition-colors ${
-            errors.title ? 'border-red-300 bg-red-50' : 'border-gray-200'
+          className={`w-full text-sm border rounded-[var(--r-lg)] px-3 py-2.5 focus:outline-none focus:border-[var(--primary)] transition-colors ${
+            errors.title ? 'border-red-300 bg-red-50' : 'border-[var(--line-1)]'
           }`}
         />
         {errors.title && <p className="mt-1 text-xs text-red-500">{errors.title}</p>}
@@ -108,11 +106,11 @@ export function RaiseIssueModal({ open, onClose, presetEntity }: Props) {
 
       {/* Priority */}
       <div>
-        <label className="block text-xs font-semibold text-gray-700 mb-1.5">Priority</label>
+        <label className="block text-xs font-semibold text-[var(--ink-700)] mb-1.5">Priority</label>
         <select
           value={priority}
           onChange={e => setPriority(e.target.value as IssuePriority)}
-          className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 bg-white focus:outline-none focus:border-[#0A5540]"
+          className="w-full text-sm border border-[var(--line-1)] rounded-[var(--r-lg)] px-3 py-2.5 bg-[var(--surface-1)] focus:outline-none focus:border-[var(--primary)]"
         >
           <option value="low">Low</option>
           <option value="medium">Medium</option>
@@ -123,7 +121,7 @@ export function RaiseIssueModal({ open, onClose, presetEntity }: Props) {
 
       {/* Description */}
       <div>
-        <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+        <label className="block text-xs font-semibold text-[var(--ink-700)] mb-1.5">
           Describe your issue or query <span className="text-red-500">*</span>
         </label>
         <textarea
@@ -131,26 +129,26 @@ export function RaiseIssueModal({ open, onClose, presetEntity }: Props) {
           onChange={e => { setDescription(e.target.value); setErrors(p => ({ ...p, description: '' })) }}
           placeholder="Be specific — what happened, what you expected, and what you've already tried."
           rows={4}
-          className={`w-full text-sm border rounded-xl px-3 py-2.5 focus:outline-none focus:border-[#0A5540] resize-none transition-colors ${
-            errors.description ? 'border-red-300 bg-red-50' : 'border-gray-200'
+          className={`w-full text-sm border rounded-[var(--r-lg)] px-3 py-2.5 focus:outline-none focus:border-[var(--primary)] resize-none transition-colors ${
+            errors.description ? 'border-red-300 bg-red-50' : 'border-[var(--line-1)]'
           }`}
         />
         {errors.description && <p className="mt-1 text-xs text-red-500">{errors.description}</p>}
-        <p className="mt-1 text-[11px] text-gray-400">Minimum 20 characters · {description.length} typed</p>
+        <p className="mt-1 text-[11px] text-[var(--ink-400)]">Minimum 20 characters · {description.length} typed</p>
       </div>
 
       {/* Actions */}
       <div className="flex gap-2 justify-end pt-1">
         <button
           onClick={handleClose}
-          className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          className="px-4 py-2 text-sm text-[var(--ink-700)] border border-[var(--line-1)] rounded-[var(--r-sm)] hover:bg-[var(--surface-2)] transition-colors"
         >
           Cancel
         </button>
         <button
           onClick={handleSubmit}
           disabled={loading}
-          className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 rounded-lg transition-colors disabled:opacity-50"
+          className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 rounded-[var(--r-sm)] transition-colors disabled:opacity-50"
         >
           <AlertCircle size={14} />
           {loading ? 'Submitting...' : 'Submit Issue'}

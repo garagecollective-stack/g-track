@@ -66,7 +66,7 @@ create table tasks (
   project_name text,
   department text not null,
   priority text check (priority in ('critical', 'high', 'medium', 'low')) default 'medium',
-  status text check (status in ('backlog', 'inProgress', 'done')) default 'backlog',
+  status text check (status in ('backlog', 'inProgress', 'done', 'onHold')) default 'backlog',
   assignee_id uuid references profiles(id) on delete set null,
   assignee_name text,
   due_date date,

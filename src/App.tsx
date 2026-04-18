@@ -1,31 +1,36 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { lazy, Suspense } from 'react'
 import { AppProvider, useApp } from './context/AppContext'
 import { ChatProvider } from './context/ChatContext'
 import { AdminProvider } from './admin/context/AdminContext'
 import { DashboardLayout } from './layouts/DashboardLayout'
 import { AdminLayout } from './admin/layouts/AdminLayout'
-import { AdminLoginPage } from './admin/pages/AdminLoginPage'
-import { AdminOverviewPage } from './admin/pages/AdminOverviewPage'
-import { AdminUsersPage } from './admin/pages/AdminUsersPage'
-import { AdminDepartmentsPage } from './admin/pages/AdminDepartmentsPage'
-import { AdminHierarchyPage } from './admin/pages/AdminHierarchyPage'
-import { AdminSettingsPage } from './admin/pages/AdminSettingsPage'
-import { AdminSetupPage } from './admin/pages/AdminSetupPage'
 import { SignInPage } from './pages/auth/SignInPage'
 import { SignUpPage } from './pages/auth/SignUpPage'
 import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage'
+import { AuthCallbackPage } from './pages/auth/AuthCallbackPage'
+import { ResetPasswordPage } from './pages/auth/ResetPasswordPage'
 import { DashboardPage } from './pages/dashboard/DashboardPage'
 import { TasksPage } from './pages/tasks/TasksPage'
-import { ProjectDetailPage } from './pages/projects/ProjectDetailPage'
-import { TeamPage } from './pages/team/TeamPage'
-import { AnalyticsPage } from './pages/analytics/AnalyticsPage'
-import { CalendarPage } from './pages/calendar/CalendarPage'
-import { ProfilePage } from './pages/profile/ProfilePage'
-import { SettingsPage } from './pages/settings/SettingsPage'
-import { TodoPage } from './pages/todos/TodoPage'
-import { IssuesPage } from './pages/issues/IssuesPage'
-import { WorkloadDashboard } from './pages/workload/WorkloadDashboard'
 import { LoadingSpinner } from './shared/LoadingSpinner'
+
+// Heavy routes — loaded lazily to reduce initial bundle size
+const AdminLoginPage       = lazy(() => import('./admin/pages/AdminLoginPage').then(m => ({ default: m.AdminLoginPage })))
+const AdminOverviewPage    = lazy(() => import('./admin/pages/AdminOverviewPage').then(m => ({ default: m.AdminOverviewPage })))
+const AdminUsersPage       = lazy(() => import('./admin/pages/AdminUsersPage').then(m => ({ default: m.AdminUsersPage })))
+const AdminDepartmentsPage = lazy(() => import('./admin/pages/AdminDepartmentsPage').then(m => ({ default: m.AdminDepartmentsPage })))
+const AdminHierarchyPage   = lazy(() => import('./admin/pages/AdminHierarchyPage').then(m => ({ default: m.AdminHierarchyPage })))
+const AdminSettingsPage    = lazy(() => import('./admin/pages/AdminSettingsPage').then(m => ({ default: m.AdminSettingsPage })))
+const AdminSetupPage       = lazy(() => import('./admin/pages/AdminSetupPage').then(m => ({ default: m.AdminSetupPage })))
+const ProjectDetailPage    = lazy(() => import('./pages/projects/ProjectDetailPage').then(m => ({ default: m.ProjectDetailPage })))
+const TeamPage             = lazy(() => import('./pages/team/TeamPage').then(m => ({ default: m.TeamPage })))
+const AnalyticsPage        = lazy(() => import('./pages/analytics/AnalyticsPage').then(m => ({ default: m.AnalyticsPage })))
+const CalendarPage         = lazy(() => import('./pages/calendar/CalendarPage').then(m => ({ default: m.CalendarPage })))
+const ProfilePage          = lazy(() => import('./pages/profile/ProfilePage').then(m => ({ default: m.ProfilePage })))
+const SettingsPage         = lazy(() => import('./pages/settings/SettingsPage').then(m => ({ default: m.SettingsPage })))
+const TodoPage             = lazy(() => import('./pages/todos/TodoPage').then(m => ({ default: m.TodoPage })))
+const IssuesPage           = lazy(() => import('./pages/issues/IssuesPage').then(m => ({ default: m.IssuesPage })))
+const WorkloadDashboard    = lazy(() => import('./pages/workload/WorkloadDashboard').then(m => ({ default: m.WorkloadDashboard })))
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { currentUser, authLoading } = useApp()
@@ -65,6 +70,7 @@ export default function App() {
         {/* ── Super Admin (completely isolated context) ── */}
         <Route path="/super-admin/*" element={
           <AdminProvider>
+            <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><LoadingSpinner size="lg" /></div>}>
             <Routes>
               <Route path="login"       element={<AdminLoginPage />} />
               <Route path="setup"       element={<AdminSetupPage />} />
@@ -78,6 +84,7 @@ export default function App() {
               </Route>
               <Route path="*"           element={<Navigate to="/super-admin/login" replace />} />
             </Routes>
+            </Suspense>
           </AdminProvider>
         } />
 
@@ -89,6 +96,8 @@ export default function App() {
               <Route path="/"               element={<SignInPage />} />
               <Route path="/signup"         element={<SignUpPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/auth/callback"  element={<AuthCallbackPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
 
               <Route path="/app" element={
                 <ProtectedRoute>
@@ -98,15 +107,15 @@ export default function App() {
                 <Route index              element={<Navigate to="/app/dashboard" replace />} />
                 <Route path="dashboard"   element={<DashboardPage />} />
                 <Route path="tasks"       element={<TasksPage />} />
-                <Route path="projects/:id" element={<ProjectDetailPage />} />
-                <Route path="team"        element={<TeamRoute><TeamPage /></TeamRoute>} />
-                <Route path="analytics"   element={<AnalyticsPage />} />
-                <Route path="calendar"    element={<CalendarPage />} />
-                <Route path="profile"     element={<ProfilePage />} />
-                <Route path="todos"       element={<TodoPage />} />
-                <Route path="settings"    element={<DirectorRoute><SettingsPage /></DirectorRoute>} />
-                <Route path="issues"      element={<IssueRoute><IssuesPage /></IssueRoute>} />
-                <Route path="workload"   element={<WorkloadDashboard />} />
+                <Route path="projects/:id" element={<Suspense fallback={<div className="flex items-center justify-center h-64"><LoadingSpinner size="lg" /></div>}><ProjectDetailPage /></Suspense>} />
+                <Route path="team"        element={<TeamRoute><Suspense fallback={<div className="flex items-center justify-center h-64"><LoadingSpinner size="lg" /></div>}><TeamPage /></Suspense></TeamRoute>} />
+                <Route path="analytics"   element={<Suspense fallback={<div className="flex items-center justify-center h-64"><LoadingSpinner size="lg" /></div>}><AnalyticsPage /></Suspense>} />
+                <Route path="calendar"    element={<Suspense fallback={<div className="flex items-center justify-center h-64"><LoadingSpinner size="lg" /></div>}><CalendarPage /></Suspense>} />
+                <Route path="profile"     element={<Suspense fallback={<div className="flex items-center justify-center h-64"><LoadingSpinner size="lg" /></div>}><ProfilePage /></Suspense>} />
+                <Route path="todos"       element={<Suspense fallback={<div className="flex items-center justify-center h-64"><LoadingSpinner size="lg" /></div>}><TodoPage /></Suspense>} />
+                <Route path="settings"    element={<DirectorRoute><Suspense fallback={<div className="flex items-center justify-center h-64"><LoadingSpinner size="lg" /></div>}><SettingsPage /></Suspense></DirectorRoute>} />
+                <Route path="issues"      element={<IssueRoute><Suspense fallback={<div className="flex items-center justify-center h-64"><LoadingSpinner size="lg" /></div>}><IssuesPage /></Suspense></IssueRoute>} />
+                <Route path="workload"   element={<Suspense fallback={<div className="flex items-center justify-center h-64"><LoadingSpinner size="lg" /></div>}><WorkloadDashboard /></Suspense>} />
               </Route>
 
               <Route path="*"             element={<Navigate to="/" replace />} />

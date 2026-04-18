@@ -34,7 +34,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
 // ── Supabase setup screen ────────────────────────────────────────
 function SetupScreen() {
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f9fafb', fontFamily: 'DM Sans, sans-serif', padding: '24px' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f9fafb', fontFamily: 'IBM Plex Sans, sans-serif', padding: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '32px' }}>
         <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#0A5540', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <span style={{ color: 'white', fontSize: '22px', fontWeight: 700 }}>G</span>
@@ -48,9 +48,9 @@ function SetupScreen() {
         </p>
         <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '16px', marginBottom: '24px' }}>
           <p style={{ fontSize: '12px', fontWeight: 600, color: '#6b7280', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Create <code style={{ fontFamily: 'DM Mono, monospace', background: '#e5e7eb', padding: '1px 6px', borderRadius: '4px' }}>.env.local</code> in the project root:
+            Create <code style={{ fontFamily: 'IBM Plex Mono, monospace', background: '#e5e7eb', padding: '1px 6px', borderRadius: '4px' }}>.env.local</code> in the project root:
           </p>
-          <pre style={{ fontSize: '13px', color: '#374151', margin: 0, fontFamily: 'DM Mono, monospace', lineHeight: '1.8' }}>
+          <pre style={{ fontSize: '13px', color: '#374151', margin: 0, fontFamily: 'IBM Plex Mono, monospace', lineHeight: '1.8' }}>
 {`VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key`}
           </pre>

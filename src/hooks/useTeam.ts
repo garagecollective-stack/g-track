@@ -1,7 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { getAuthCallbackUrl } from '../lib/authConfig'
 import type { Profile, Role } from '../types'
 import { useApp } from '../context/AppContext'
+
+interface ProfileManagerRow {
+  profile_id: string
+  manager_id: string
+}
 
 export function useTeam() {
   const { currentUser } = useApp()
@@ -26,13 +32,13 @@ export function useTeam() {
 
       const managersMap = new Map<string, string[]>()
       if (managersData) {
-        for (const row of managersData as any[]) {
+        for (const row of managersData as ProfileManagerRow[]) {
           const existing = managersMap.get(row.profile_id) || []
           managersMap.set(row.profile_id, [...existing, row.manager_id])
         }
       }
 
-      const profiles = (data || []).map((u: any) => ({
+      const profiles = (data || []).map((u: Profile) => ({
         ...u,
         manager_ids: managersMap.get(u.id) || [],
       }))
@@ -143,24 +149,10 @@ export function useTeam() {
   }
 
   const deleteUser = async (userId: string, targetName?: string) => {
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
-    if (sessionError || !sessionData?.session?.access_token) {
-      throw new Error('No active session found. Please log in again.')
-    }
-    const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionData.session.access_token}`,
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-        },
-        body: JSON.stringify({ userId }),
-      }
-    )
-    const data = await response.json()
-    if (!response.ok || data?.error) throw new Error(data?.error || `HTTP ${response.status}`)
+    const { data, error: err } = await supabase.functions.invoke('admin-delete-user', {
+      body: { userId },
+    })
+    if (err || data?.error) throw new Error(err?.message || data?.error)
     await supabase.from('audit_logs').insert({
       performed_by: currentUser?.id,
       action: 'User deleted',
@@ -172,10 +164,17 @@ export function useTeam() {
   }
 
   const inviteUser = async (name: string, email: string, department: string, role: string) => {
-    const { error: err } = await supabase.auth.admin?.inviteUserByEmail(email, {
-      data: { name, department, role },
+    const { data, error: err } = await supabase.functions.invoke('admin-create-user', {
+      body: {
+        name,
+        email,
+        department: department || null,
+        role,
+        manager_id: null,
+        emailRedirectTo: getAuthCallbackUrl(),
+      },
     })
-    if (err) throw err
+    if (err || data?.error) throw new Error(err?.message || data?.error)
     await supabase.from('audit_logs').insert({
       performed_by: currentUser?.id,
       action: 'User invited',

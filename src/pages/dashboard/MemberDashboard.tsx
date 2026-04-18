@@ -25,7 +25,7 @@ const STATUS_STYLE: Record<string, string> = {
   open: 'bg-red-100 text-red-700',
   in_review: 'bg-blue-100 text-blue-700',
   resolved: 'bg-green-100 text-green-700',
-  closed: 'bg-gray-100 text-gray-600',
+  closed: 'bg-[var(--surface-2)] text-[var(--ink-700)]',
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -48,13 +48,19 @@ function StatCard({ icon: Icon, value, label, iconColor, iconBg, onClick }: Stat
   return (
     <div
       onClick={onClick}
-      className={`bg-white border border-gray-100 rounded-2xl p-4 md:p-5 shadow-sm hover:shadow-md transition-all ${onClick ? 'cursor-pointer hover:border-[#0A5540]/30' : ''}`}
+      className={`group relative bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] p-4 md:p-5 shadow-[var(--shadow-sm)] overflow-hidden transition-all duration-200 ${onClick ? 'cursor-pointer hover:-translate-y-0.5 hover:shadow-[var(--shadow-lg)] hover:border-[var(--primary-200)]' : ''}`}
     >
-      <div className={`w-9 h-9 md:w-10 md:h-10 ${iconBg} rounded-xl flex items-center justify-center mb-3`}>
-        <Icon size={18} className={iconColor} />
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--line-2)] to-transparent pointer-events-none" />
+      <div className="flex items-start justify-between mb-3">
+        <span className="text-[12px] font-medium text-[var(--ink-500)]">{label}</span>
+        <div className={`w-9 h-9 ${iconBg} rounded-[var(--r-sm)] flex items-center justify-center transition-transform duration-200 group-hover:scale-105`}>
+          <Icon size={17} strokeWidth={2} className={iconColor} />
+        </div>
       </div>
-      <p className="text-2xl md:text-3xl font-black text-gray-900" style={{ fontFamily: 'DM Mono, monospace' }}>{value}</p>
-      <p className="text-xs md:text-sm font-semibold text-gray-600 mt-0.5">{label}</p>
+      <p className="font-display text-[28px] md:text-[32px] leading-[1.1] tabular-nums font-semibold text-[var(--ink-900)] tracking-[-0.02em]">{value}</p>
+      {onClick && (
+        <span className="absolute top-4 right-[52px] opacity-0 translate-x-[-4px] group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 text-[var(--primary)] text-xs font-mono pointer-events-none">↗</span>
+      )}
     </div>
   )
 }
@@ -88,37 +94,37 @@ function RevisionViewModal({ task, onClose, onMarkDone }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100">
+      <div className="bg-[var(--surface-1)] rounded-2xl shadow-xl w-full max-w-md">
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-[var(--line-1)]">
           <div>
             <p className="text-[11px] font-semibold text-orange-500 uppercase tracking-wide mb-0.5">Revision Requested</p>
-            <h2 className="text-base font-bold text-gray-900 leading-tight">{task.title}</h2>
+            <h2 className="text-base font-bold text-[var(--ink-900)] leading-tight">{task.title}</h2>
           </div>
-          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+          <button onClick={onClose} className="p-1.5 text-[var(--ink-400)] hover:text-[var(--ink-700)] hover:bg-[var(--surface-2)] rounded-[var(--r-sm)] transition-colors">
             <X size={16} />
           </button>
         </div>
 
         <div className="p-5">
           {loading ? (
-            <div className="h-20 bg-gray-100 rounded-xl animate-pulse" />
+            <div className="h-20 bg-[var(--surface-2)] rounded-[var(--r-lg)] animate-pulse" />
           ) : latest ? (
-            <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 space-y-2">
+            <div className="bg-orange-50 border border-orange-200 rounded-[var(--r-lg)] p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-orange-700">Revision #{latest.revision_number}</span>
                 {latest.submitted_by_name && (
-                  <span className="text-[11px] text-gray-400">by {latest.submitted_by_name}</span>
+                  <span className="text-[11px] text-[var(--ink-400)]">by {latest.submitted_by_name}</span>
                 )}
               </div>
-              <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{latest.feedback}</p>
+              <p className="text-sm text-[var(--ink-900)] whitespace-pre-wrap leading-relaxed">{latest.feedback}</p>
             </div>
           ) : (
-            <p className="text-sm text-gray-400 text-center py-4">No revision details available.</p>
+            <p className="text-sm text-[var(--ink-400)] text-center py-4">No revision details available.</p>
           )}
 
           <div className="flex gap-3 mt-5">
             <button onClick={onClose}
-              className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
+              className="flex-1 py-2.5 text-sm font-medium text-[var(--ink-700)] bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] hover:bg-[var(--surface-2)] transition-colors">
               Close
             </button>
             <button
@@ -128,7 +134,7 @@ function RevisionViewModal({ task, onClose, onMarkDone }: {
                 await onMarkDone()
                 setMarking(false)
               }}
-              className="flex-1 py-2.5 text-sm font-medium text-white bg-[#0A5540] rounded-xl hover:bg-[#0d6b51] transition-colors disabled:opacity-60">
+              className="flex-1 py-2.5 text-sm font-medium text-white bg-[var(--primary)] rounded-[var(--r-lg)] hover:bg-[var(--primary-700)] transition-colors disabled:opacity-60">
               {marking ? 'Saving…' : '✓ Mark as Done'}
             </button>
           </div>
@@ -183,15 +189,24 @@ export function MemberDashboard() {
   }
 
   return (
-    <div className="px-4 py-5 md:px-6 md:py-8 max-w-[1280px] mx-auto">
+    <div className="px-4 py-6 md:px-8 md:py-8 max-w-[1440px] mx-auto">
       {/* Header */}
-      <div className="mb-5">
-        <h1 className="text-2xl md:text-3xl font-black text-gray-900" style={{ letterSpacing: '-0.5px' }}>My Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-1">Welcome back, {currentUser?.name.split(' ')[0]}</p>
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-[11px] font-medium tracking-[0.06em] uppercase text-[var(--primary)] bg-[var(--primary-50)] border border-[var(--primary-200)] rounded-[var(--r-xs)] px-2 py-0.5">Member</span>
+          <span className="text-[12px] text-[var(--ink-400)]">·</span>
+          <span className="text-[12px] text-[var(--ink-500)]">{currentUser?.department || 'Workspace'}</span>
+        </div>
+        <h1 className="font-display text-[24px] md:text-[32px] leading-[1.15] font-semibold text-[var(--ink-900)] tracking-[-0.02em]">
+          Welcome back, {currentUser?.name.split(' ')[0]}
+        </h1>
+        <p className="text-[14px] text-[var(--ink-500)] mt-1">
+          Here's what's on your plate today.
+        </p>
       </div>
 
       {/* Info banner */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-start gap-2.5 mb-5">
+      <div className="bg-blue-50 border border-blue-200 rounded-[var(--r-lg)] px-4 py-3 flex items-start gap-2.5 mb-5">
         <Info size={16} className="text-blue-500 mt-0.5 shrink-0" />
         <div className="text-sm text-blue-700">
           <span className="font-medium">Read-only mode.</span> You can view tasks and update their status only.{' '}
@@ -203,14 +218,14 @@ export function MemberDashboard() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-5">
         <StatCard icon={CheckSquare}   value={myTasks.length} label="My Tasks"    iconColor="text-indigo-600" iconBg="bg-indigo-50" onClick={() => setStatModal({ open: true, type: 'tasks', title: 'My Tasks' })} />
         <StatCard icon={Zap}           value={inProgress}     label="In Progress" iconColor="text-blue-600"   iconBg="bg-blue-50"   onClick={() => setStatModal({ open: true, type: 'tasks', title: 'In Progress Tasks' })} />
-        <StatCard icon={CheckCheck}    value={done}           label="Completed"   iconColor="text-[#0A5540]"  iconBg="bg-[#edf8f4]" onClick={() => setStatModal({ open: true, type: 'completed', title: 'Completed Tasks' })} />
-        <StatCard icon={AlertTriangle} value={overdueCnt}     label="Overdue"     iconColor={overdueCnt > 0 ? 'text-red-500' : 'text-gray-400'} iconBg={overdueCnt > 0 ? 'bg-red-50' : 'bg-gray-50'} onClick={() => setStatModal({ open: true, type: 'overdue', title: 'Overdue Tasks' })} />
+        <StatCard icon={CheckCheck}    value={done}           label="Completed"   iconColor="text-[var(--primary)]"  iconBg="bg-[var(--primary-50)]" onClick={() => setStatModal({ open: true, type: 'completed', title: 'Completed Tasks' })} />
+        <StatCard icon={AlertTriangle} value={overdueCnt}     label="Overdue"     iconColor={overdueCnt > 0 ? 'text-red-500' : 'text-[var(--ink-400)]'} iconBg={overdueCnt > 0 ? 'bg-red-50' : 'bg-[var(--surface-2)]'} onClick={() => setStatModal({ open: true, type: 'overdue', title: 'Overdue Tasks' })} />
       </div>
 
       {/* Urgent banner */}
       {urgentTasks.length > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-2xl p-4 mb-5 flex items-start gap-3">
-          <div className="w-9 h-9 bg-red-100 rounded-xl flex items-center justify-center shrink-0">
+          <div className="w-9 h-9 bg-red-100 rounded-[var(--r-lg)] flex items-center justify-center shrink-0">
             <AlertTriangle size={18} className="text-red-500" />
           </div>
           <div>
@@ -229,13 +244,13 @@ export function MemberDashboard() {
         <div className="flex-1 min-w-0 space-y-5">
           {/* Tasks section */}
           <div>
-            <h2 className="text-base font-bold text-gray-900 mb-3">My Tasks</h2>
+            <h2 className="text-base font-bold text-[var(--ink-900)] mb-3">My Tasks</h2>
             {taskLoading ? (
               <div className="space-y-2"><SkeletonCard count={4} /></div>
             ) : myTasks.length === 0 ? (
-              <div className="bg-white border border-gray-100 rounded-xl p-10 text-center">
-                <CheckSquare size={36} className="mx-auto text-gray-200 mb-3" />
-                <p className="text-sm text-gray-400">No tasks assigned yet</p>
+              <div className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] p-10 text-center">
+                <CheckSquare size={36} className="mx-auto text-[var(--ink-400)] mb-3" />
+                <p className="text-sm text-[var(--ink-400)]">No tasks assigned yet</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -244,10 +259,10 @@ export function MemberDashboard() {
                   return (
                     <div key={task.id}
                       onClick={() => task.has_active_revision ? setSelectedTask(task) : undefined}
-                      className={`bg-white border rounded-xl p-4 transition-all ${task.has_active_revision ? 'cursor-pointer hover:shadow-sm' : ''} ${
+                      className={`bg-[var(--surface-1)] border rounded-[var(--r-lg)] p-4 transition-all ${task.has_active_revision ? 'cursor-pointer hover:shadow-sm' : ''} ${
                         task.has_active_revision ? 'border-orange-200 bg-orange-50/30 hover:border-orange-300'
                         : taskOverdue ? 'border-red-200 bg-red-50/30'
-                        : 'border-gray-100 hover:border-[#0A5540]/30'
+                        : 'border-[var(--line-1)] hover:border-[var(--primary)]/30'
                       }`}>
                       {task.has_active_revision && (
                         <div className="flex items-center gap-1.5 mb-2 text-xs font-semibold text-orange-600">
@@ -256,11 +271,11 @@ export function MemberDashboard() {
                       )}
                       <div className="flex items-start justify-between gap-3 mb-2">
                         <div className="flex-1 min-w-0">
-                          <p className={`text-sm font-semibold ${task.status === 'done' ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                          <p className={`text-sm font-semibold ${task.status === 'done' ? 'line-through text-[var(--ink-400)]' : 'text-[var(--ink-900)]'}`}>
                             {task.title}
                           </p>
                           {task.project_name && (
-                            <span className="inline-flex items-center gap-1 text-xs text-gray-500 mt-0.5">
+                            <span className="inline-flex items-center gap-1 text-xs text-[var(--ink-500)] mt-0.5">
                               <FolderKanban size={11} /> {task.project_name}
                             </span>
                           )}
@@ -274,7 +289,7 @@ export function MemberDashboard() {
                         <div className="flex items-center gap-2">
                           <PriorityBadge priority={task.priority} />
                           {task.due_date && (
-                            <span className={`flex items-center gap-1 text-xs ${taskOverdue ? 'text-red-500 font-semibold' : 'text-gray-400'}`}>
+                            <span className={`flex items-center gap-1 text-xs ${taskOverdue ? 'text-red-500 font-semibold' : 'text-[var(--ink-400)]'}`}>
                               <Calendar size={11} />
                               {taskOverdue ? 'Overdue · ' : ''}{formatDateShort(task.due_date)}
                             </span>
@@ -284,20 +299,20 @@ export function MemberDashboard() {
                           {/* Status-only actions for member */}
                           {task.status === 'backlog' && (
                             <button onClick={e => { e.stopPropagation(); handleStatusChange(task.id, 'inProgress') }}
-                              className="text-xs px-2.5 py-1 bg-[#0A5540] text-white font-medium rounded-lg hover:bg-[#0d6b51] transition-colors">
+                              className="text-xs px-2.5 py-1 bg-[var(--primary)] text-white font-medium rounded-[var(--r-sm)] hover:bg-[var(--primary-700)] transition-colors">
                               Start
                             </button>
                           )}
                           {task.status === 'inProgress' && !task.has_active_revision && (
                             <button onClick={e => { e.stopPropagation(); handleStatusChange(task.id, 'done') }}
-                              className="text-xs px-2.5 py-1 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 transition-colors">
+                              className="text-xs px-2.5 py-1 bg-green-500 text-white font-medium rounded-[var(--r-sm)] hover:bg-green-600 transition-colors">
                               Done
                             </button>
                           )}
                           {/* Issue button */}
                           <button
                             onClick={e => { e.stopPropagation(); setShowRaiseIssue(true) }}
-                            className="text-xs px-2 py-1 bg-amber-50 border border-amber-200 text-amber-700 rounded-lg hover:bg-amber-100 transition-colors"
+                            className="text-xs px-2 py-1 bg-amber-50 border border-amber-200 text-amber-700 rounded-[var(--r-sm)] hover:bg-amber-100 transition-colors"
                           >
                             ⚠ Issue
                           </button>
@@ -313,10 +328,10 @@ export function MemberDashboard() {
           {/* My Issues section */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-bold text-gray-900">My Issues</h2>
+              <h2 className="text-base font-bold text-[var(--ink-900)]">My Issues</h2>
               <button
                 onClick={() => setShowRaiseIssue(true)}
-                className="flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-100 transition-colors"
+                className="flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-[var(--r-sm)] hover:bg-amber-100 transition-colors"
               >
                 <Plus size={12} /> Raise New Issue
               </button>
@@ -324,27 +339,27 @@ export function MemberDashboard() {
             {issuesLoading ? (
               <SkeletonCard count={2} />
             ) : myIssues.length === 0 ? (
-              <div className="bg-white border border-gray-100 rounded-xl p-8 text-center">
-                <AlertCircle size={32} className="mx-auto text-gray-200 mb-2" />
-                <p className="text-sm text-gray-400">No issues raised yet</p>
+              <div className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] p-8 text-center">
+                <AlertCircle size={32} className="mx-auto text-[var(--ink-400)] mb-2" />
+                <p className="text-sm text-[var(--ink-400)]">No issues raised yet</p>
               </div>
             ) : (
-              <div className="bg-white border border-gray-100 rounded-xl divide-y divide-gray-50 overflow-hidden">
+              <div className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] divide-y divide-[var(--line-1)] overflow-hidden">
                 {myIssues.map(issue => (
                   <button
                     key={issue.id}
                     onClick={() => setOpenIssue(issue)}
-                    className="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                    className="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-[var(--surface-2)] transition-colors"
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{issue.title}</p>
-                      <p className="text-xs text-gray-400 mt-0.5 truncate">{issue.entity_name}</p>
+                      <p className="text-sm font-medium text-[var(--ink-900)] truncate">{issue.title}</p>
+                      <p className="text-xs text-[var(--ink-400)] mt-0.5 truncate">{issue.entity_name}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${STATUS_STYLE[issue.status] || 'bg-gray-100 text-gray-600'}`}>
+                      <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${STATUS_STYLE[issue.status] || 'bg-[var(--surface-2)] text-[var(--ink-700)]'}`}>
                         {STATUS_LABEL[issue.status] || issue.status}
                       </span>
-                      <span className="text-[11px] text-gray-400">{timeAgo(issue.updated_at)}</span>
+                      <span className="text-[11px] text-[var(--ink-400)]">{timeAgo(issue.updated_at)}</span>
                     </div>
                   </button>
                 ))}
@@ -354,32 +369,32 @@ export function MemberDashboard() {
         </div>
 
         {/* Sidebar */}
-        <div className="lg:w-72 xl:w-80 shrink-0 space-y-4">
+        <div className="lg:w-72 xl:w-80 2xl:w-96 shrink-0 space-y-4">
           {/* Personal To-Do Widget */}
           <TodoWidget />
 
           {/* My Projects */}
-          <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100">
-              <h3 className="text-sm font-bold text-gray-900">My Projects</h3>
+          <div className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] overflow-hidden">
+            <div className="px-4 py-3 border-b border-[var(--line-1)]">
+              <h3 className="text-sm font-bold text-[var(--ink-900)]">My Projects</h3>
             </div>
             <div className="p-3 space-y-2">
               {projLoading ? (
                 <SkeletonCard count={2} />
               ) : projects.length === 0 ? (
-                <p className="text-xs text-gray-400 text-center py-4">Not on any projects yet</p>
+                <p className="text-xs text-[var(--ink-400)] text-center py-4">Not on any projects yet</p>
               ) : projects.map(project => (
                 <div key={project.id}
                   onClick={() => navigate(`/app/projects/${project.id}`)}
-                  className="p-3 rounded-xl border border-gray-100 hover:border-[#0A5540]/30 hover:bg-gray-50 cursor-pointer transition-all group">
+                  className="p-3 rounded-[var(--r-lg)] border border-[var(--line-1)] hover:border-[var(--primary)]/30 hover:bg-[var(--surface-2)] cursor-pointer transition-all group">
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <p className="text-xs font-bold text-gray-900 group-hover:text-[#0A5540] transition-colors truncate">
+                    <p className="text-xs font-bold text-[var(--ink-900)] group-hover:text-[var(--primary)] transition-colors truncate">
                       {project.name}
                     </p>
                     <StatusBadge status={project.status} />
                   </div>
                   <ProgressBar value={project.progress} showLabel size="sm" />
-                  {project.client && <p className="text-[10px] text-gray-400 mt-1">{project.client}</p>}
+                  {project.client && <p className="text-[10px] text-[var(--ink-400)] mt-1">{project.client}</p>}
                 </div>
               ))}
             </div>
@@ -387,17 +402,17 @@ export function MemberDashboard() {
 
           {/* Completed Tasks */}
           {done > 0 && (
-            <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100">
-                <h3 className="text-sm font-bold text-gray-900">Completed ({done})</h3>
+            <div className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] overflow-hidden">
+              <div className="px-4 py-3 border-b border-[var(--line-1)]">
+                <h3 className="text-sm font-bold text-[var(--ink-900)]">Completed ({done})</h3>
               </div>
-              <div className="divide-y divide-gray-50 max-h-48 overflow-y-auto">
+              <div className="divide-y divide-[var(--line-1)] max-h-48 overflow-y-auto">
                 {myTasks.filter(t => t.status === 'done').map(task => (
-                  <div key={task.id} className="flex items-start gap-2 px-4 py-2.5 hover:bg-gray-50 transition-colors">
-                    <CheckCheck size={14} className="text-[#0A5540] mt-0.5 shrink-0" />
+                  <div key={task.id} className="flex items-start gap-2 px-4 py-2.5 hover:bg-[var(--surface-2)] transition-colors">
+                    <CheckCheck size={14} className="text-[var(--primary)] mt-0.5 shrink-0" />
                     <div className="min-w-0">
-                      <p className="text-xs font-medium text-gray-500 line-through truncate">{task.title}</p>
-                      {task.project_name && <p className="text-[10px] text-gray-400">{task.project_name}</p>}
+                      <p className="text-xs font-medium text-[var(--ink-500)] line-through truncate">{task.title}</p>
+                      {task.project_name && <p className="text-[10px] text-[var(--ink-400)]">{task.project_name}</p>}
                     </div>
                   </div>
                 ))}

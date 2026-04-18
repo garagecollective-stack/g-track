@@ -12,7 +12,7 @@ import { LoadingSpinner } from '../../shared/LoadingSpinner'
 const STATUS_COLORS = {
   Backlog: '#F97316',
   'In Progress': '#3b82f6',
-  Done: '#22c55e',
+  Done: '#16a273',
 } as const
 
 const tooltipStyle = {
@@ -20,7 +20,7 @@ const tooltipStyle = {
   border: '1px solid #e5e7eb',
   borderRadius: '8px',
   fontSize: '13px',
-  fontFamily: 'DM Sans',
+  fontFamily: 'IBM Plex Sans',
 }
 
 interface WorkloadRow {
@@ -118,14 +118,14 @@ export function WorkloadDashboard() {
     : 'Your current task breakdown by status'
 
   return (
-    <div className="px-4 py-5 md:px-6 md:py-8 max-w-[1280px] mx-auto">
+    <div className="px-4 py-5 md:px-6 md:py-8 max-w-[1440px] mx-auto">
       {/* Header */}
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900" style={{ letterSpacing: '-0.5px' }}>
+          <h1 className="text-2xl font-bold text-[var(--ink-900)]" style={{ letterSpacing: '-0.5px' }}>
             Workload
           </h1>
-          <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
+          <p className="text-sm text-[var(--ink-500)] mt-1">{subtitle}</p>
         </div>
 
         {/* Director filter controls */}
@@ -134,7 +134,7 @@ export function WorkloadDashboard() {
             <select
               value={selectedDeptId ?? ''}
               onChange={e => setSelectedDeptId(e.target.value || null)}
-              className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#0A5540]/20"
+              className="text-sm border border-[var(--line-1)] rounded-[var(--r-sm)] px-3 py-2 bg-[var(--surface-1)] text-[var(--ink-700)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/15"
             >
               <option value="">All Teams</option>
               {departments.map(d => (
@@ -144,7 +144,7 @@ export function WorkloadDashboard() {
             {selectedDeptId && (
               <button
                 onClick={() => setSelectedDeptId(null)}
-                className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg px-3 py-2 bg-white hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-1.5 text-sm text-[var(--ink-500)] hover:text-[var(--ink-700)] border border-[var(--line-1)] rounded-[var(--r-sm)] px-3 py-2 bg-[var(--surface-1)] hover:bg-[var(--surface-2)] transition-colors"
               >
                 <X size={14} />
                 Clear Filter
@@ -159,12 +159,12 @@ export function WorkloadDashboard() {
         <div className="flex items-center gap-2 text-sm mb-5">
           <button
             onClick={() => setSelectedDeptId(null)}
-            className="text-[#0A5540] hover:underline font-medium"
+            className="text-[var(--primary)] hover:underline font-medium"
           >
             All Teams
           </button>
-          <ChevronRight size={14} className="text-gray-400" />
-          <span className="text-gray-700 font-medium">{selectedDept.name}</span>
+          <ChevronRight size={14} className="text-[var(--ink-400)]" />
+          <span className="text-[var(--ink-700)] font-medium">{selectedDept.name}</span>
         </div>
       )}
 
@@ -176,20 +176,20 @@ export function WorkloadDashboard() {
         <>
           {/* Member view: three status stat cards */}
           {isMember && rows.length > 0 && (
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {(['Backlog', 'In Progress', 'Done'] as const).map(status => (
-                <div key={status} className="bg-white border border-gray-100 rounded-xl p-5">
+                <div key={status} className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] p-5">
                   <div className="flex items-center gap-2 mb-2">
                     <span
                       className="w-2.5 h-2.5 rounded-full"
                       style={{ background: STATUS_COLORS[status] }}
                     />
-                    <span className="text-sm text-gray-500">{status}</span>
+                    <span className="text-sm text-[var(--ink-500)]">{status}</span>
                   </div>
-                  <p className="text-3xl font-bold text-gray-900" style={{ fontFamily: 'DM Mono' }}>
+                  <p className="text-2xl md:text-3xl font-bold text-[var(--ink-900)]" style={{ fontFamily: 'IBM Plex Mono' }}>
                     {rows[0][status]}
                   </p>
-                  <p className="text-xs text-gray-400 mt-1">tasks</p>
+                  <p className="text-xs text-[var(--ink-400)] mt-1">tasks</p>
                 </div>
               ))}
             </div>
@@ -197,9 +197,9 @@ export function WorkloadDashboard() {
 
           {/* Bar chart for lead / director views */}
           {!isMember && rows.length > 0 && (
-            <div className="bg-white border border-gray-100 rounded-xl p-5">
+            <div className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] p-5">
               {isDirector && !selectedDeptId && (
-                <p className="text-xs text-gray-400 mb-4">Click a bar to drill down into that team</p>
+                <p className="text-xs text-[var(--ink-400)] mb-4">Click a bar to drill down into that team</p>
               )}
               <ResponsiveContainer width="100%" height={340}>
                 <BarChart
@@ -223,8 +223,8 @@ export function WorkloadDashboard() {
 
           {/* Empty state */}
           {rows.length === 0 && (
-            <div className="bg-white border border-gray-100 rounded-xl p-12 text-center">
-              <p className="text-gray-400 text-sm">No task data to display.</p>
+            <div className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] p-12 text-center">
+              <p className="text-[var(--ink-400)] text-sm">No task data to display.</p>
             </div>
           )}
         </>

@@ -3,6 +3,25 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import type { Profile, ToastItem, Task, Project } from '../types'
 import { requestNotificationPermission } from '../services/pushNotifications'
+import { setDndUntil } from '../services/notificationSound'
+
+interface TaskAssigneeProfile {
+  id: string
+  name: string
+  avatar_url: string | null
+  role: string
+  department: string | null
+}
+
+interface TaskAssigneeRow {
+  profile?: TaskAssigneeProfile | TaskAssigneeProfile[] | null
+}
+
+interface TaskQueryRow extends Omit<Task, 'assignee' | 'creator' | 'assignees' | 'project'> {
+  assignee?: Task['assignee'] | Task['assignee'][]
+  creator?: Task['creator'] | Task['creator'][]
+  assignees?: TaskAssigneeRow[]
+}
 
 interface AppContextType {
   currentUser: Profile | null
@@ -11,6 +30,10 @@ interface AppContextType {
   signOut: () => Promise<void>
   refreshUser: () => Promise<void>
   updateTheme: (theme: 'light' | 'dark') => Promise<void>
+  setStatus: (text: string | null, emoji: string | null, expiresAt: string | null) => Promise<void>
+  clearStatus: () => Promise<void>
+  setDND: (until: string | null) => Promise<void>
+  clearDND: () => Promise<void>
   toasts: ToastItem[]
   addToast: (toast: Omit<ToastItem, 'id'>) => void
   removeToast: (id: string) => void
@@ -99,7 +122,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       // Full query with optional feature columns (revision, multi-assignee, on-hold).
       // Falls back to base query if the DB schema doesn't have these columns/tables yet.
-      let result = await supabase
+      let result: {
+        data: unknown[] | null
+        error: Error | null
+      } = await supabase
         .from('tasks')
         .select(`
           id, title, description,
@@ -118,7 +144,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           )
         `)
         .order('created_at', { ascending: false })
-        .limit(150)
+          .limit(150)
 
       // If the full query fails (e.g. feature columns not yet in DB), retry with base columns only (no joins)
       if (result.error) {
@@ -134,29 +160,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             created_at, is_overdue, overdue_alerted_at
           `)
           .order('created_at', { ascending: false })
-          .limit(150) as any
+          .limit(150)
       }
 
       const { data, error: err } = result
       if (err) throw err
 
-      const fetched = (data || []).map((task: any) => ({
+      const fetched = ((data || []) as unknown as TaskQueryRow[]).map((task) => ({
         ...task,
         assignee: Array.isArray(task.assignee) ? (task.assignee[0] ?? null) : (task.assignee ?? null),
         creator:  Array.isArray(task.creator)  ? (task.creator[0]  ?? null) : (task.creator  ?? null),
-        assignees: (task.assignees || []).map((a: any) => a.profile).filter(Boolean),
-      }))
-
-      // Client-side overdue detection: mark tasks overdue without waiting for nightly cron
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const overdueIds = fetched
-        .filter(t => t.due_date && new Date(t.due_date) < today && t.status !== 'done' && !t.is_overdue)
-        .map(t => t.id)
-
-      if (overdueIds.length > 0) {
-        supabase.from('tasks').update({ is_overdue: true }).in('id', overdueIds).then(() => {})
-      }
+        assignees: (task.assignees || []).flatMap((a) => {
+          if (Array.isArray(a.profile)) return a.profile
+          return a.profile ? [a.profile] : []
+        }),
+      })) as Task[]
 
       setTasks(fetched)
     } catch (e) {
@@ -320,6 +338,77 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [session])
 
+  const setStatus = useCallback(async (text: string | null, emoji: string | null, expiresAt: string | null) => {
+    if (!session?.user.id) return
+    setCurrentUser(prev => prev ? { ...prev, status_text: text, status_emoji: emoji, status_expires_at: expiresAt } : prev)
+    const { error } = await supabase
+      .from('profiles')
+      .update({ status_text: text, status_emoji: emoji, status_expires_at: expiresAt })
+      .eq('id', session.user.id)
+    if (error) throw error
+  }, [session])
+
+  const clearStatus = useCallback(async () => {
+    if (!session?.user.id) return
+    setCurrentUser(prev => prev ? { ...prev, status_text: null, status_emoji: null, status_expires_at: null } : prev)
+    const { error } = await supabase
+      .from('profiles')
+      .update({ status_text: null, status_emoji: null, status_expires_at: null })
+      .eq('id', session.user.id)
+    if (error) throw error
+  }, [session])
+
+  const setDND = useCallback(async (until: string | null) => {
+    if (!session?.user.id) return
+    setCurrentUser(prev => prev ? { ...prev, dnd_until: until } : prev)
+    const { error } = await supabase
+      .from('profiles')
+      .update({ dnd_until: until })
+      .eq('id', session.user.id)
+    if (error) throw error
+  }, [session])
+
+  const clearDND = useCallback(async () => {
+    if (!session?.user.id) return
+    setCurrentUser(prev => prev ? { ...prev, dnd_until: null } : prev)
+    const { error } = await supabase
+      .from('profiles')
+      .update({ dnd_until: null })
+      .eq('id', session.user.id)
+    if (error) throw error
+  }, [session])
+
+  // Auto-clear expired status text
+  useEffect(() => {
+    if (!currentUser?.status_expires_at) return
+    const expiresAt = new Date(currentUser.status_expires_at).getTime()
+    const now = Date.now()
+    if (expiresAt <= now) {
+      clearStatus().catch(() => {})
+      return
+    }
+    const timer = setTimeout(() => {
+      clearStatus().catch(() => {})
+    }, expiresAt - now)
+    return () => clearTimeout(timer)
+  }, [currentUser?.status_expires_at, clearStatus])
+
+  // Auto-clear expired DND + mirror to localStorage for non-React modules
+  useEffect(() => {
+    setDndUntil(currentUser?.dnd_until ?? null)
+    if (!currentUser?.dnd_until) return
+    const expiresAt = new Date(currentUser.dnd_until).getTime()
+    const now = Date.now()
+    if (expiresAt <= now) {
+      clearDND().catch(() => {})
+      return
+    }
+    const timer = setTimeout(() => {
+      clearDND().catch(() => {})
+    }, expiresAt - now)
+    return () => clearTimeout(timer)
+  }, [currentUser?.dnd_until, clearDND])
+
   const addToast = useCallback((toast: Omit<ToastItem, 'id'>) => {
     const id = Math.random().toString(36).substring(2) + Date.now().toString(36)
     setToasts(prev => [...prev, { ...toast, id }])
@@ -336,6 +425,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <AppContext.Provider value={{
       currentUser, session, authLoading,
       signOut, refreshUser, updateTheme,
+      setStatus, clearStatus, setDND, clearDND,
       toasts, addToast, removeToast,
       tasks, setTasks, tasksLoading, tasksError, fetchTasks,
       projects, setProjects, projectsLoading, projectsError, fetchProjects,

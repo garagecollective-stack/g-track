@@ -19,7 +19,7 @@ export function ProgressBar({ value, color = '#0A5540', size = 'md', showLabel =
         />
       </div>
       {showLabel && (
-        <span className="text-xs font-medium text-gray-500 dark:text-[#6B7280] shrink-0 w-8 text-right" style={{ fontFamily: 'JetBrains Mono, DM Mono, monospace', fontFeatureSettings: '"tnum"' }}>
+        <span className="text-xs font-medium text-[var(--ink-500)] shrink-0 w-8 text-right tabular-nums" style={{ fontFamily: 'IBM Plex Mono, monospace', fontFeatureSettings: '"tnum"' }}>
           {clamped}%
         </span>
       )}

@@ -6,9 +6,8 @@
  * edge function can verify the caller has the super_admin role server-side
  * before touching auth.users or public.profiles.
  *
- * Reads (list users, list depts, etc.) still use the supabaseAdmin client
- * directly — the service_role key is acceptable for read-only queries in an
- * internal tool, and edge functions would add unnecessary latency for those.
+ * Reads still use the authenticated admin session client directly.
+ * The browser must never receive a service_role key.
  */
 
 import { supabaseAdminAuth } from './supabaseAdmin'
@@ -38,6 +37,7 @@ async function callFunction<T>(
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type':  'application/json',
+      'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
     },
     body: JSON.stringify(payload),
   })
@@ -56,7 +56,6 @@ async function callFunction<T>(
 export interface CreateUserPayload {
   name:       string
   email:      string
-  password:   string
   role:       string
   department: string | null
   manager_id: string | null
@@ -67,14 +66,15 @@ export interface UpdateUserPayload {
   role?:       string
   department?: string | null
   manager_id?: string | null
+  manager_ids?: string[]
   is_active?:  boolean
 }
 
 export const adminApi = {
   /**
    * POST /api/admin/create-user
-   * Creates an auth.users entry + public.profiles row in a single transaction.
-   * Rolls back the auth user if profile insertion fails.
+   * Sends a server-side invite and provisions the public.profiles row.
+   * The browser never generates or stores another user's password.
    */
   createUser: (payload: CreateUserPayload) =>
     callFunction<{ user: { id: string; email: string; name: string } }>(

@@ -51,23 +51,23 @@ export function GeneralTab() {
     <>
       <div className="max-w-2xl space-y-8">
         <div>
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">Company</h3>
+          <h3 className="text-sm font-semibold text-[var(--ink-900)] mb-4">Company</h3>
           <div className="space-y-4">
             {/* Company Logo */}
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-2">Company Logo</label>
+              <label className="text-sm font-medium text-[var(--ink-700)] block mb-2">Company Logo</label>
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden bg-gray-50">
+                <div className="w-16 h-16 rounded-[var(--r-lg)] border-2 border-dashed border-[var(--line-1)] flex items-center justify-center overflow-hidden bg-[var(--surface-2)]">
                   {logoPreview ? (
                     <img src={logoPreview} alt="Logo" className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-[#0A5540] flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full bg-[var(--primary)] flex items-center justify-center">
                       <span className="text-white text-lg font-bold">G</span>
                     </div>
                   )}
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                  <label className="cursor-pointer flex items-center gap-2 px-3 py-2 text-sm font-medium text-[var(--ink-700)] bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-sm)] hover:bg-[var(--surface-2)] transition-colors">
                     <Upload size={14} /> Upload Logo
                     <input type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
                   </label>
@@ -79,34 +79,34 @@ export function GeneralTab() {
                       <X size={14} /> Remove
                     </button>
                   )}
-                  <p className="text-xs text-gray-400">PNG, JPG up to 2MB</p>
+                  <p className="text-xs text-[var(--ink-400)]">PNG, JPG up to 2MB</p>
                 </div>
               </div>
             </div>
 
             {/* Company Name */}
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1.5">Company Name</label>
+              <label className="text-sm font-medium text-[var(--ink-700)] block mb-1.5">Company Name</label>
               <input
                 type="text"
                 value={companyName}
                 onChange={e => setCompanyName(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:border-[#0A5540] focus:ring-2 focus:ring-[#0A5540]/10"
+                className="w-full border border-[var(--line-1)] rounded-[var(--r-sm)] px-3 py-2 text-sm text-[var(--ink-900)] bg-[var(--surface-1)] focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15"
               />
             </div>
           </div>
         </div>
 
-        <div className="border-t border-gray-100 pt-6">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">Localization</h3>
+        <div className="border-t border-[var(--line-1)] pt-6">
+          <h3 className="text-sm font-semibold text-[var(--ink-900)] mb-4">Localization</h3>
           <div className="space-y-4">
             {/* Timezone */}
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1.5">Timezone</label>
+              <label className="text-sm font-medium text-[var(--ink-700)] block mb-1.5">Timezone</label>
               <select
                 value={timezone}
                 onChange={e => setTimezone(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:border-[#0A5540]"
+                className="w-full border border-[var(--line-1)] rounded-[var(--r-sm)] px-3 py-2 text-sm text-[var(--ink-900)] bg-[var(--surface-1)] focus:outline-none focus:border-[var(--primary)]"
               >
                 {TIMEZONES.map(tz => (
                   <option key={tz.value} value={tz.value}>{tz.label}</option>
@@ -116,11 +116,11 @@ export function GeneralTab() {
 
             {/* Date Format */}
             <div>
-              <label className="text-sm font-medium text-gray-700 block mb-1.5">Date Format</label>
+              <label className="text-sm font-medium text-[var(--ink-700)] block mb-1.5">Date Format</label>
               <select
                 value={dateFormat}
                 onChange={e => setDateFormat(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:border-[#0A5540]"
+                className="w-full border border-[var(--line-1)] rounded-[var(--r-sm)] px-3 py-2 text-sm text-[var(--ink-900)] bg-[var(--surface-1)] focus:outline-none focus:border-[var(--primary)]"
               >
                 {DATE_FORMATS.map(fmt => (
                   <option key={fmt.value} value={fmt.value}>{fmt.label}</option>
@@ -130,16 +130,16 @@ export function GeneralTab() {
           </div>
         </div>
 
-        <div className="border-t border-gray-100 pt-6">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">Account</h3>
-          <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+        <div className="border-t border-[var(--line-1)] pt-6">
+          <h3 className="text-sm font-semibold text-[var(--ink-900)] mb-4">Account</h3>
+          <div className="bg-[var(--surface-2)] rounded-[var(--r-lg)] p-4 space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500">Email</span>
-              <span className="font-medium text-gray-900">{currentUser?.email}</span>
+              <span className="text-[var(--ink-500)]">Email</span>
+              <span className="font-medium text-[var(--ink-900)]">{currentUser?.email}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500">Role</span>
-              <span className="font-medium text-gray-900 capitalize">{currentUser?.role}</span>
+              <span className="text-[var(--ink-500)]">Role</span>
+              <span className="font-medium text-[var(--ink-900)] capitalize">{currentUser?.role}</span>
             </div>
           </div>
         </div>
@@ -148,7 +148,7 @@ export function GeneralTab() {
           <button
             onClick={() => setShowConfirm(true)}
             disabled={saving}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0A5540] rounded-lg hover:bg-[#0d6b51] transition-colors disabled:opacity-70 disabled:pointer-events-none"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[var(--primary)] rounded-[var(--r-sm)] hover:bg-[var(--primary-700)] transition-colors disabled:opacity-70 disabled:pointer-events-none"
           >
             {saving && <LoadingSpinner size="sm" color="white" />}
             Save Changes

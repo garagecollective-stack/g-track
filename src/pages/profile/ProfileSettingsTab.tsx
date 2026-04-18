@@ -13,15 +13,16 @@ function validateName(name: string): string | null {
   const t = name.trim()
   if (t.length < 2)  return 'Name must be at least 2 characters'
   if (t.length > 50) return 'Name must be at most 50 characters'
-  if (!/^[a-zA-Z\s'\-]+$/.test(t)) return 'Only letters, spaces, hyphens and apostrophes allowed'
+  if (!/^[a-zA-Z\s'-]+$/.test(t)) return 'Only letters, spaces, hyphens and apostrophes allowed'
   return null
 }
 
 function validatePassword(pw: string): string | null {
-  if (pw.length < 8)         return 'At least 8 characters required'
+  if (pw.length < 12)        return 'At least 12 characters required'
   if (!/[A-Z]/.test(pw))     return 'Must include an uppercase letter'
   if (!/[a-z]/.test(pw))     return 'Must include a lowercase letter'
   if (!/[0-9]/.test(pw))     return 'Must include a number'
+  if (!/[^A-Za-z0-9]/.test(pw)) return 'Must include a symbol'
   return null
 }
 
@@ -30,24 +31,24 @@ function validatePassword(pw: string): string | null {
 // Light: brand green  /  Dark: jade green
 const inputCls = (hasError?: boolean) =>
   [
-    'w-full rounded-lg px-3 py-[9px] text-sm border',
-    'bg-white       dark:bg-[#0D0D0D]',
-    'text-gray-900  dark:text-white',
-    'placeholder:text-gray-400 dark:placeholder:text-[#6B7280]',
+    'w-full rounded-[var(--r-sm)] px-3 py-[9px] text-sm border',
+    'bg-[var(--surface-1)]       dark:bg-[#0D0D0D]',
+    'text-[var(--ink-900)]  dark:text-[var(--ink-900)]',
+    'placeholder:text-[var(--ink-400)] dark:placeholder:text-[#6B7280]',
     'focus:outline-none focus:ring-1 transition-colors duration-150',
     hasError
       ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20'
-      : 'border-gray-200 dark:border-[#1F2937] focus:border-[#0A5540] dark:focus:border-[#22C55E] focus:ring-[#0A5540]/10 dark:focus:ring-[#22C55E]/20',
+      : 'border-[var(--line-1)] dark:border-[#1F2937] focus:border-[var(--primary)] dark:focus:border-[#16a273] focus:ring-[var(--primary)]/15 dark:focus:ring-[#16a273]/20',
   ].join(' ')
 
 const btnPrimary =
-  'flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-150 disabled:opacity-60 ' +
-  'bg-[#0A5540] text-white hover:bg-[#0d6b51] ' +
-  'dark:bg-[#22C55E] dark:text-black dark:hover:bg-[#16A34A]'
+  'flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-[var(--r-sm)] transition-colors duration-150 disabled:opacity-60 ' +
+  'bg-[var(--primary)] text-white hover:bg-[var(--primary-700)] ' +
+  'dark:bg-[#16a273] dark:text-black dark:hover:bg-[#073928]'
 
 const btnSecondary =
-  'px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-150 ' +
-  'border border-gray-200 text-gray-700 hover:bg-gray-50 ' +
+  'px-4 py-2 text-sm font-medium rounded-[var(--r-sm)] transition-colors duration-150 ' +
+  'border border-[var(--line-1)] text-[var(--ink-700)] hover:bg-[var(--surface-2)] ' +
   'dark:border-[#1F2937] dark:text-[#B3B3B3] dark:hover:bg-[#141414]'
 
 // ── Shared wrappers ──────────────────────────────────────────
@@ -59,19 +60,19 @@ function Section({ title, icon: Icon, children }: {
 }) {
   return (
     <div className={[
-      'rounded-xl p-5 border transition-colors duration-150',
-      'bg-white              dark:bg-[#0D0D0D]',
-      'border-gray-100       dark:border-[#1F2937]',
-      'hover:border-gray-200 dark:hover:border-[#374151]',
+      'rounded-[var(--r-lg)] p-5 border transition-colors duration-150',
+      'bg-[var(--surface-1)]              dark:bg-[#0D0D0D]',
+      'border-[var(--line-1)]       dark:border-[#1F2937]',
+      'hover:border-[var(--line-1)] dark:hover:border-[#374151]',
     ].join(' ')}>
       <div className={[
         'flex items-center gap-2.5 mb-5 pb-4 border-b',
-        'border-gray-100 dark:border-[#1F2937]',
+        'border-[var(--line-1)] dark:border-[#1F2937]',
       ].join(' ')}>
-        <span className="w-7 h-7 rounded-lg bg-[#edf8f4] dark:bg-[#22C55E]/10 flex items-center justify-center">
-          <Icon size={14} className="text-[#0A5540] dark:text-[#22C55E]" />
+        <span className="w-7 h-7 rounded-[var(--r-sm)] bg-[var(--primary-50)] dark:bg-[#16a273]/10 flex items-center justify-center">
+          <Icon size={14} className="text-[var(--primary)] dark:text-[#16a273]" />
         </span>
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{title}</h3>
+        <h3 className="text-sm font-semibold text-[var(--ink-900)] dark:text-[var(--ink-900)]">{title}</h3>
       </div>
       {children}
     </div>
@@ -85,7 +86,7 @@ function Field({ label, error, children }: {
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium mb-1.5 text-gray-700 dark:text-[#B3B3B3]">
+      <label className="block text-sm font-medium mb-1.5 text-[var(--ink-700)] dark:text-[#B3B3B3]">
         {label}
       </label>
       {children}
@@ -132,7 +133,7 @@ function PasswordInputField({
         aria-label={show ? 'Hide password' : 'Show password'}
         className={[
           'absolute right-3 top-1/2 -translate-y-1/2 transition-colors duration-150',
-          'text-gray-400 hover:text-gray-600',
+          'text-[var(--ink-400)] hover:text-[var(--ink-700)]',
           'dark:text-[#6B7280] dark:hover:text-[#B3B3B3]',
         ].join(' ')}
       >
@@ -210,7 +211,7 @@ function AvatarSection() {
         {/* Avatar preview */}
         <div className="relative shrink-0">
           <div className={[
-            'w-20 h-20 rounded-full overflow-hidden flex items-center justify-center bg-[#0A5540]',
+            'w-20 h-20 rounded-full overflow-hidden flex items-center justify-center bg-[var(--primary)]',
             'ring-4 ring-gray-100 dark:ring-[#1F2937]',
           ].join(' ')}>
             {preview
@@ -219,7 +220,7 @@ function AvatarSection() {
             }
           </div>
           {preview && (
-            <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#22C55E] rounded-full flex items-center justify-center ring-2 ring-white dark:ring-black">
+            <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#16a273] rounded-full flex items-center justify-center ring-2 ring-white dark:ring-black">
               <Check size={10} className="text-black" strokeWidth={3} />
             </span>
           )}
@@ -227,7 +228,7 @@ function AvatarSection() {
 
         {/* Controls */}
         <div className="flex-1 space-y-3 text-center sm:text-left">
-          <p className="text-sm text-gray-500 dark:text-[#6B7280]">
+          <p className="text-sm text-[var(--ink-500)] dark:text-[#6B7280]">
             JPG, PNG, or WebP · Max 2 MB
           </p>
           <input
@@ -249,7 +250,7 @@ function AvatarSection() {
                 </button>
                 <button
                   onClick={handleCancel}
-                  className="text-sm text-gray-400 dark:text-[#6B7280] hover:text-gray-600 dark:hover:text-[#B3B3B3] transition-colors"
+                  className="text-sm text-[var(--ink-400)] dark:text-[#6B7280] hover:text-[var(--ink-700)] dark:hover:text-[#B3B3B3] transition-colors"
                 >
                   Cancel
                 </button>
@@ -356,16 +357,16 @@ function ThemeSection() {
         onClick={() => handleToggle(id)}
         disabled={saving}
         className={[
-          'flex-1 flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all duration-150',
+          'flex-1 flex flex-col items-center gap-3 p-4 rounded-[var(--r-lg)] border-2 transition-all duration-150',
           isActive
-            ? 'border-[#0A5540] bg-[#edf8f4] dark:border-[#22C55E] dark:bg-[#22C55E]/10'
-            : 'border-gray-200 dark:border-[#1F2937] hover:border-gray-300 dark:hover:border-[#374151]',
+            ? 'border-[var(--primary)] bg-[var(--primary-50)] dark:border-[#16a273] dark:bg-[#16a273]/10'
+            : 'border-[var(--line-1)] dark:border-[#1F2937] hover:border-[var(--line-2)] dark:hover:border-[#374151]',
         ].join(' ')}
       >
         {icon}
-        <span className="text-sm font-medium text-gray-800 dark:text-white">{label}</span>
+        <span className="text-sm font-medium text-[var(--ink-900)] dark:text-[var(--ink-900)]">{label}</span>
         {isActive && (
-          <span className="w-4 h-4 rounded-full bg-[#0A5540] dark:bg-[#22C55E] flex items-center justify-center">
+          <span className="w-4 h-4 rounded-full bg-[var(--primary)] dark:bg-[#16a273] flex items-center justify-center">
             <Check size={9} className="text-white dark:text-black" strokeWidth={3} />
           </span>
         )}
@@ -385,13 +386,13 @@ function ThemeSection() {
         )}
         {themeBtn(
           'dark',
-          <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-[#000000] flex items-center justify-center border dark:border-[#1F2937]">
-            <Moon size={20} className="text-gray-500 dark:text-[#4ADE80]" />
+          <div className="w-10 h-10 rounded-full bg-[var(--surface-2)] dark:bg-[#000000] flex items-center justify-center border dark:border-[#1F2937]">
+            <Moon size={20} className="text-[var(--ink-500)] dark:text-[#4ADE80]" />
           </div>,
           'Dark',
         )}
       </div>
-      <p className="text-xs text-gray-400 dark:text-[#6B7280] mt-3">
+      <p className="text-xs text-[var(--ink-400)] dark:text-[#6B7280] mt-3">
         Preference is saved to your account and synced across sessions.
       </p>
     </Section>
@@ -468,7 +469,7 @@ function PasswordSection() {
   const strength = (() => {
     if (!newPw) return 0
     let s = 0
-    if (newPw.length >= 8)            s++
+    if (newPw.length >= 12)           s++
     if (/[A-Z]/.test(newPw))          s++
     if (/[a-z]/.test(newPw))          s++
     if (/[0-9]/.test(newPw))          s++
@@ -477,7 +478,7 @@ function PasswordSection() {
   })()
 
   const strengthLabel = ['', 'Weak', 'Fair', 'Good', 'Strong', 'Very Strong'][strength]
-  const strengthColor = ['', 'bg-red-500', 'bg-orange-400', 'bg-yellow-400', 'bg-[#4ADE80]', 'bg-[#22C55E]'][strength]
+  const strengthColor = ['', 'bg-red-500', 'bg-orange-400', 'bg-yellow-400', 'bg-[#4ADE80]', 'bg-[#16a273]'][strength]
 
   return (
     <Section title="Change Password" icon={Lock}>
@@ -522,7 +523,7 @@ function PasswordSection() {
                   />
                 ))}
               </div>
-              <p className="text-xs text-gray-400 dark:text-[#6B7280]">{strengthLabel}</p>
+              <p className="text-xs text-[var(--ink-400)] dark:text-[#6B7280]">{strengthLabel}</p>
             </div>
           )}
         </Field>

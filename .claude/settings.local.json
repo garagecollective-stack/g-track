@@ -8,7 +8,16 @@
       "Read(//d/Saas//**)",
       "Read(//d/KAAYU//**)",
       "Read(//d/Garage AI//**)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(node -e \":*)",
+      "Bash(npm install:*)",
+      "Bash(node scripts/generate-icons.mjs)",
+      "Bash(mkdir -p ~/.claude/scripts)",
+      "Read(//c/Users/garag/.claude/**)",
+      "Bash(xargs -0 sed -i -E -e 's/#0A5540/#0C5CAB/g' -e 's/#0a5540/#0C5CAB/g' -e 's/#0d6b51/#0a4f93/g' -e 's/#edf8f4/#e8f1fb/g' -e 's/#d6f0e8/#c7ddf5/g' -e 's/#22C55E/#2e78d0/g' -e 's/#22c55e/#2e78d0/g' -e 's/#16A34A/#084078/g' -e 's/#16a34a/#084078/g' -e 's/'\\\\''DM Mono'\\\\''/'\\\\''IBM Plex Mono'\\\\''/g' -e 's/\"DM Mono\"/\"IBM Plex Mono\"/g' -e 's/'\\\\''DM Sans'\\\\''/'\\\\''IBM Plex Sans'\\\\''/g' -e 's/\"DM Sans\"/\"IBM Plex Sans\"/g')",
+      "Bash(bash modal-tokens2.sh)",
+      "Bash(bash admin-tokens.sh)",
+      "Bash(bash auth-tokens.sh)"
     ]
   }
 }

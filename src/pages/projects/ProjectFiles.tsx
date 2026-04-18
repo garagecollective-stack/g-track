@@ -22,7 +22,7 @@ export function ProjectFiles({ projectId }: Props) {
   const canWrite = currentUser?.role !== 'member'
 
   useEffect(() => {
-    fetchFiles()
+    void fetchFiles()
   }, [projectId])
 
   const fetchFiles = async () => {
@@ -85,7 +85,7 @@ export function ProjectFiles({ projectId }: Props) {
             <button
               onClick={handleUpload}
               disabled={uploading}
-              className="mt-3 px-4 py-2 text-sm font-medium text-white bg-[#0A5540] rounded-lg hover:bg-[#0d6b51] transition-colors disabled:opacity-70"
+              className="btn-primary mt-3 disabled:opacity-70"
             >
               {uploading ? 'Uploading...' : `Upload ${newFiles.length} file${newFiles.length > 1 ? 's' : ''}`}
             </button>
@@ -93,30 +93,30 @@ export function ProjectFiles({ projectId }: Props) {
         </div>
       )}
 
-      <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
+      <div className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] overflow-hidden shadow-[var(--shadow-xs)]">
         {loading ? (
           <div className="p-4 space-y-3">
-            {[1,2,3].map(i => <div key={i} className="skeleton h-12 rounded-lg" />)}
+            {[1,2,3].map(i => <div key={i} className="skeleton h-12 rounded-[var(--r-sm)]" />)}
           </div>
         ) : files.length === 0 ? (
-          <p className="text-center text-sm text-gray-400 py-10">No files uploaded yet</p>
+          <p className="text-center text-[13px] text-[var(--ink-400)] py-10">No files uploaded yet</p>
         ) : (
-          <ul className="divide-y divide-gray-50">
+          <ul className="divide-y divide-[var(--line-1)]">
             {files.map(f => (
-              <li key={f.id} className="flex items-center gap-3 px-4 py-3">
+              <li key={f.id} className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--surface-2)] transition-colors">
                 <span className="text-xl shrink-0">{getFileIcon(f.file_type)}</span>
                 <div className="flex-1 min-w-0">
                   <a href={f.file_url} target="_blank" rel="noopener noreferrer"
-                    className="text-sm font-medium text-gray-900 hover:text-[#0A5540] truncate block">
+                    className="text-[13px] font-medium text-[var(--ink-900)] hover:text-[var(--primary)] truncate block transition-colors">
                     {f.file_name}
                   </a>
-                  <p className="text-xs text-gray-400">
-                    {formatFileSize(f.file_size)} · {(f as any).uploader?.name || 'Unknown'} · {timeAgo(f.uploaded_at)}
+                  <p className="text-[11px] text-[var(--ink-400)] mt-0.5 font-mono tabular-nums">
+                    {formatFileSize(f.file_size)} <span className="font-sans">· {(f as any).uploader?.name || 'Unknown'} ·</span> {timeAgo(f.uploaded_at)}
                   </p>
                 </div>
                 {canWrite && (
-                  <button onClick={() => setDeleteTarget(f)} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors shrink-0">
-                    <Trash2 size={15} />
+                  <button onClick={() => setDeleteTarget(f)} className="p-1.5 text-[var(--ink-400)] hover:text-red-500 transition-colors shrink-0" aria-label="Delete file">
+                    <Trash2 size={15} strokeWidth={1.8} />
                   </button>
                 )}
               </li>

@@ -39,16 +39,21 @@ if (typeof window !== 'undefined') {
   window.addEventListener('touchstart', unlock, { passive: true })
 }
 
-export async function playNotificationSound(_type: 'default' | 'chat' | 'urgent' = 'default') {
+export async function playNotificationSound(_soundType: 'default' | 'chat' | 'urgent' = 'default') {
   if (!isSoundEnabled()) return
+  if (isDndActive()) return
   if (!unlocked) return   // not unlocked yet — skip silently
 
   try {
     const a = ensureAudio()
-    a.currentTime = 0
-    await a.play()
+    // Clone so rapid-fire notifications don't cancel the previous play()
+    // (cloneNode reuses the same decoded buffer — cheap)
+    const clip = a.cloneNode(true) as HTMLAudioElement
+    clip.volume = a.volume
+    await clip.play()
   } catch {
-    // Fail silently — sound is non-critical
+    // Fail silently — sound is non-critical. Chrome can reject if the tab
+    // hasn't had any recent interaction; it will accept again on next click.
   }
 }
 
@@ -65,5 +70,27 @@ export function setSoundEnabled(enabled: boolean) {
     localStorage.setItem('gtrack_sound_enabled', String(enabled))
   } catch {
     // ignore
+  }
+}
+
+// DND gate — AppContext mirrors the profile's dnd_until here so any module can
+// check without pulling the React context in. Kept in localStorage so it also
+// survives tab reloads before the profile refetch lands.
+export function setDndUntil(until: string | null) {
+  try {
+    if (until) localStorage.setItem('gtrack_dnd_until', until)
+    else localStorage.removeItem('gtrack_dnd_until')
+  } catch {
+    // ignore
+  }
+}
+
+export function isDndActive(): boolean {
+  try {
+    const until = localStorage.getItem('gtrack_dnd_until')
+    if (!until) return false
+    return new Date(until).getTime() > Date.now()
+  } catch {
+    return false
   }
 }

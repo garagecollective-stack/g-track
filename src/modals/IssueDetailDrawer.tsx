@@ -14,14 +14,14 @@ const PRIORITY_STYLE: Record<string, string> = {
   urgent: 'bg-red-100 text-red-700 border border-red-200',
   high: 'bg-orange-100 text-orange-700 border border-orange-200',
   medium: 'bg-yellow-100 text-yellow-700 border border-yellow-200',
-  low: 'bg-gray-100 text-gray-600 border border-gray-200',
+  low: 'bg-[var(--surface-2)] text-[var(--ink-700)] border border-[var(--line-1)]',
 }
 
 const STATUS_STYLE: Record<string, string> = {
   open: 'bg-red-100 text-red-700',
   in_review: 'bg-blue-100 text-blue-700',
   resolved: 'bg-green-100 text-green-700',
-  closed: 'bg-gray-100 text-gray-600',
+  closed: 'bg-[var(--surface-2)] text-[var(--ink-700)]',
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -127,45 +127,45 @@ export function IssueDetailDrawer({ issue: initialIssue, onClose, onUpdate }: Pr
       />
 
       {/* Drawer */}
-      <div className="fixed inset-y-0 right-0 w-full md:w-[480px] bg-white z-50 flex flex-col shadow-2xl">
+      <div className="fixed top-0 right-0 w-full md:w-[480px] bg-[var(--surface-1)] z-50 flex flex-col shadow-2xl" style={{ height: '100dvh' }}>
         {/* Header */}
-        <div className="flex items-start gap-3 px-5 py-4 border-b border-gray-100 shrink-0">
-          <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors mt-0.5">
+        <div className="flex items-start gap-3 px-5 py-4 border-b border-[var(--line-1)] shrink-0">
+          <button onClick={onClose} className="p-2.5 text-[var(--ink-400)] hover:text-[var(--ink-700)] rounded-[var(--r-sm)] hover:bg-[var(--surface-2)] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0">
             <X size={18} />
           </button>
           <div className="flex-1 min-w-0">
-            <h2 className="text-base font-bold text-gray-900 leading-tight">{issue.title}</h2>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <h2 className="text-base font-bold text-[var(--ink-900)] leading-tight">{issue.title}</h2>
+            <p className="text-xs text-[var(--ink-500)] mt-0.5">
               Raised by <span className="font-medium">{issue.raised_by_name}</span> · {timeAgo(issue.created_at)}
             </p>
           </div>
         </div>
 
         {/* Status + Priority row */}
-        <div className="flex items-center gap-2 px-5 py-3 border-b border-gray-100 shrink-0 flex-wrap">
-          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${PRIORITY_STYLE[issue.priority] || 'bg-gray-100 text-gray-600'}`}>
+        <div className="flex items-center gap-2 px-5 py-3 border-b border-[var(--line-1)] shrink-0 flex-wrap">
+          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${PRIORITY_STYLE[issue.priority] || 'bg-[var(--surface-2)] text-[var(--ink-700)]'}`}>
             {issue.priority.charAt(0).toUpperCase() + issue.priority.slice(1)} Priority
           </span>
-          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_STYLE[issue.status] || 'bg-gray-100 text-gray-600'}`}>
+          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_STYLE[issue.status] || 'bg-[var(--surface-2)] text-[var(--ink-700)]'}`}>
             {STATUS_LABEL[issue.status] || issue.status}
           </span>
-          <span className="ml-1 flex items-center gap-1 text-xs text-gray-500">
+          <span className="ml-1 flex items-center gap-1 text-xs text-[var(--ink-500)]">
             {issue.entity_type === 'project' ? <Folder size={12} /> : <CheckSquare size={12} />}
             {issue.entity_name}
           </span>
         </div>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
           {/* Description */}
-          <div className="px-5 py-4 border-b border-gray-100">
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Description</p>
-            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{issue.description}</p>
+          <div className="px-5 py-4 border-b border-[var(--line-1)]">
+            <p className="text-[11px] font-bold text-[var(--ink-400)] uppercase tracking-wider mb-2">Description</p>
+            <p className="text-sm text-[var(--ink-700)] leading-relaxed whitespace-pre-line">{issue.description}</p>
           </div>
 
           {/* Resolution note (if resolved) */}
           {issue.status === 'resolved' && issue.resolution_note && (
-            <div className="px-5 py-4 border-b border-gray-100 bg-green-50">
+            <div className="px-5 py-4 border-b border-[var(--line-1)] bg-green-50">
               <div className="flex items-center gap-1.5 mb-2">
                 <CheckCircle size={14} className="text-green-600" />
                 <p className="text-[11px] font-bold text-green-700 uppercase tracking-wider">Resolution</p>
@@ -175,30 +175,30 @@ export function IssueDetailDrawer({ issue: initialIssue, onClose, onUpdate }: Pr
           )}
 
           {/* Replies */}
-          <div className="px-5 py-4 border-b border-gray-100">
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3">
+          <div className="px-5 py-4 border-b border-[var(--line-1)]">
+            <p className="text-[11px] font-bold text-[var(--ink-400)] uppercase tracking-wider mb-3">
               Conversation ({replies.length})
             </p>
             {repliesLoading ? (
               <div className="space-y-2">
-                {[1,2].map(i => <div key={i} className="h-12 bg-gray-100 rounded-lg animate-pulse" />)}
+                {[1,2].map(i => <div key={i} className="h-12 bg-[var(--surface-2)] rounded-[var(--r-sm)] animate-pulse" />)}
               </div>
             ) : replies.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-4">No replies yet.</p>
+              <p className="text-sm text-[var(--ink-400)] text-center py-4">No replies yet.</p>
             ) : (
               <div className="space-y-3">
                 {replies.map(reply => (
                   <div key={reply.id} className="flex items-start gap-3">
-                    <div className="w-7 h-7 rounded-full bg-[#0A5540]/10 flex items-center justify-center shrink-0 text-xs font-bold text-[#0A5540]">
+                    <div className="w-7 h-7 rounded-full bg-[var(--primary)]/10 flex items-center justify-center shrink-0 text-xs font-bold text-[var(--primary)]">
                       {reply.replied_by_name.charAt(0).toUpperCase()}
                     </div>
-                    <div className="flex-1 min-w-0 bg-gray-50 rounded-xl px-3 py-2">
+                    <div className="flex-1 min-w-0 bg-[var(--surface-2)] rounded-[var(--r-lg)] px-3 py-2">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-semibold text-gray-900">{reply.replied_by_name}</span>
-                        <span className="text-[10px] text-gray-400 capitalize">{reply.replied_by_role}</span>
-                        <span className="text-[10px] text-gray-400 ml-auto">{timeAgo(reply.created_at)}</span>
+                        <span className="text-xs font-semibold text-[var(--ink-900)]">{reply.replied_by_name}</span>
+                        <span className="text-[10px] text-[var(--ink-400)] capitalize">{reply.replied_by_role}</span>
+                        <span className="text-[10px] text-[var(--ink-400)] ml-auto">{timeAgo(reply.created_at)}</span>
                       </div>
-                      <p className="text-sm text-gray-700 leading-relaxed">{reply.message}</p>
+                      <p className="text-sm text-[var(--ink-700)] leading-relaxed">{reply.message}</p>
                     </div>
                   </div>
                 ))}
@@ -207,19 +207,19 @@ export function IssueDetailDrawer({ issue: initialIssue, onClose, onUpdate }: Pr
           </div>
 
           {/* Reply input */}
-          <div className="px-5 py-4 border-b border-gray-100">
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Reply</p>
+          <div className="px-5 py-4 border-b border-[var(--line-1)]">
+            <p className="text-[11px] font-bold text-[var(--ink-400)] uppercase tracking-wider mb-2">Reply</p>
             <textarea
               value={replyText}
               onChange={e => setReplyText(e.target.value)}
               placeholder="Write a reply..."
               rows={3}
-              className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-[#0A5540] resize-none"
+              className="w-full text-sm border border-[var(--line-1)] rounded-[var(--r-lg)] px-3 py-2.5 focus:outline-none focus:border-[var(--primary)] resize-none"
             />
             <button
               onClick={() => { if (replyText.trim()) setShowReplyConfirm(true) }}
               disabled={!replyText.trim() || sendingReply}
-              className="mt-2 flex items-center gap-2 px-4 py-2 bg-[#0A5540] text-white text-sm font-medium rounded-lg hover:bg-[#0d6b51] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="mt-2 flex items-center gap-2 px-4 py-2 bg-[var(--primary)] text-white text-sm font-medium rounded-[var(--r-sm)] hover:bg-[var(--primary-700)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Send size={14} />
               {sendingReply ? 'Sending...' : 'Send Reply'}
@@ -229,19 +229,19 @@ export function IssueDetailDrawer({ issue: initialIssue, onClose, onUpdate }: Pr
           {/* Resolution actions — hidden for members */}
           {!isMember && issue.status !== 'resolved' && issue.status !== 'closed' && (
             <div className="px-5 py-4">
-              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Resolution</p>
+              <p className="text-[11px] font-bold text-[var(--ink-400)] uppercase tracking-wider mb-2">Resolution</p>
               <textarea
                 value={resolutionNote}
                 onChange={e => setResolutionNote(e.target.value)}
                 placeholder="Resolution note (required to resolve)..."
                 rows={2}
-                className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-[#0A5540] resize-none mb-3"
+                className="w-full text-sm border border-[var(--line-1)] rounded-[var(--r-lg)] px-3 py-2.5 focus:outline-none focus:border-[var(--primary)] resize-none mb-3"
               />
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setShowReviewConfirm(true)}
                   disabled={markingReview || issue.status === 'in_review'}
-                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-[var(--r-sm)] hover:bg-blue-100 transition-colors disabled:opacity-50"
                 >
                   <Clock size={14} />
                   {markingReview ? 'Updating...' : 'Mark In Review'}
@@ -249,14 +249,14 @@ export function IssueDetailDrawer({ issue: initialIssue, onClose, onUpdate }: Pr
                 <button
                   onClick={() => { if (resolutionNote.trim()) setShowResolveConfirm(true) }}
                   disabled={!resolutionNote.trim() || resolving}
-                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-[#0A5540] rounded-lg hover:bg-[#0d6b51] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-[var(--primary)] rounded-[var(--r-sm)] hover:bg-[var(--primary-700)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <CheckCheck size={14} />
                   {resolving ? 'Resolving...' : '✓ Resolve Issue'}
                 </button>
                 <button
                   onClick={() => setShowCloseConfirm(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-[var(--ink-700)] bg-[var(--surface-2)] border border-[var(--line-1)] rounded-[var(--r-sm)] hover:bg-gray-200 transition-colors"
                 >
                   <X size={14} />
                   Close Issue

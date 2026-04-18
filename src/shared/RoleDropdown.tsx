@@ -20,11 +20,11 @@ const ROLE_OPTIONS: RoleOption[] = [
     label: 'Director',
     subLabel: 'Full access to all departments',
     icon: Shield,
-    iconColor: 'text-[#0A5540]',
-    badgeBg: 'bg-[#edf8f4]',
-    badgeText: 'text-[#0A5540]',
+    iconColor: 'text-[var(--primary)]',
+    badgeBg: 'bg-[var(--primary-50)]',
+    badgeText: 'text-[var(--primary)]',
     badgeLabel: 'Director',
-    selectedBg: 'bg-[#edf8f4]',
+    selectedBg: 'bg-[var(--primary-50)]',
   },
   {
     value: 'teamLead',
@@ -86,20 +86,21 @@ export function RoleDropdown({ value, onChange, disabled }: Props) {
     return () => document.removeEventListener('mousedown', onMouseDown)
   }, [])
 
-  // Reset focused idx when opening
-  useEffect(() => {
-    if (open) {
-      const idx = ROLE_OPTIONS.findIndex(o => o.value === value)
-      setFocusedIdx(idx >= 0 ? idx : 0)
-    } else {
-      setFocusedIdx(-1)
-    }
-  }, [open, value])
+  const openDropdown = () => {
+    const idx = ROLE_OPTIONS.findIndex(o => o.value === value)
+    setFocusedIdx(idx >= 0 ? idx : 0)
+    setOpen(true)
+  }
+
+  const closeDropdown = () => {
+    setFocusedIdx(-1)
+    setOpen(false)
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!open) {
       if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault(); setOpen(true)
+        e.preventDefault(); openDropdown()
       }
       return
     }
@@ -109,15 +110,15 @@ export function RoleDropdown({ value, onChange, disabled }: Props) {
       case 'Enter':
       case ' ':
         e.preventDefault()
-        if (focusedIdx >= 0) { onChange(ROLE_OPTIONS[focusedIdx].value); setOpen(false) }
+        if (focusedIdx >= 0) { onChange(ROLE_OPTIONS[focusedIdx].value); closeDropdown() }
         break
-      case 'Escape': e.preventDefault(); setOpen(false); break
+      case 'Escape': e.preventDefault(); closeDropdown(); break
     }
   }
 
   const selectOption = (optValue: Role) => {
     onChange(optValue)
-    setOpen(false)
+    closeDropdown()
     btnRef.current?.focus()
   }
 
@@ -129,24 +130,24 @@ export function RoleDropdown({ value, onChange, disabled }: Props) {
         const isFocused = focusedIdx === idx
         return (
           <div key={opt.value}>
-            {idx > 0 && <div className="border-t border-gray-100 dark:border-gray-800 mx-3" />}
+            {idx > 0 && <div className="border-t border-[var(--line-1)] dark:border-[var(--line-1)] mx-3" />}
             <button
               type="button"
               onClick={() => selectOption(opt.value)}
               onMouseEnter={() => setFocusedIdx(idx)}
               className={`w-full flex items-center gap-3 px-3 py-3 text-left transition-colors duration-100 ${
-                isSelected ? opt.selectedBg : isFocused ? 'bg-gray-50 dark:bg-gray-800' : ''
+                isSelected ? opt.selectedBg : isFocused ? 'bg-[var(--surface-2)] dark:bg-[var(--surface-1)]' : ''
               }`}
             >
               <Icon size={16} className={opt.iconColor} />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 dark:text-white">{opt.label}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{opt.subLabel}</p>
+                <p className="text-sm font-medium text-[var(--ink-900)] dark:text-[var(--ink-900)]">{opt.label}</p>
+                <p className="text-xs text-[var(--ink-400)] mt-0.5">{opt.subLabel}</p>
               </div>
               <span className={`text-xs font-medium rounded-full px-2 py-0.5 shrink-0 ${opt.badgeBg} ${opt.badgeText}`}>
                 {opt.badgeLabel}
               </span>
-              {isSelected && <Check size={14} className="text-[#0A5540] shrink-0" />}
+              {isSelected && <Check size={14} className="text-[var(--primary)] shrink-0" />}
             </button>
           </div>
         )
@@ -160,16 +161,20 @@ export function RoleDropdown({ value, onChange, disabled }: Props) {
     <button
       ref={btnRef}
       type="button"
-      onClick={() => !disabled && setOpen(p => !p)}
+      onClick={() => {
+        if (disabled) return
+        if (open) closeDropdown()
+        else openDropdown()
+      }}
       onKeyDown={handleKeyDown}
       disabled={disabled}
-      className="w-full h-[42px] flex items-center bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg px-3 gap-2 transition-all duration-150 hover:border-gray-300 focus:outline-none focus:border-[#0A5540] focus:ring-2 focus:ring-[#0A5540]/10 disabled:opacity-60 disabled:cursor-not-allowed"
+      className="w-full h-[42px] flex items-center bg-[var(--surface-1)] dark:bg-[var(--surface-0)] border border-[var(--line-1)] dark:border-[var(--line-1)] rounded-[var(--r-sm)] px-3 gap-2 transition-all duration-150 hover:border-[var(--line-2)] focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 disabled:opacity-60 disabled:cursor-not-allowed"
     >
       <SelectedIcon size={16} className={selected.iconColor} />
       <span className={`text-xs font-medium rounded-full px-2 py-0.5 ${selected.badgeBg} ${selected.badgeText}`}>
         {selected.badgeLabel}
       </span>
-      <ChevronDown size={16} className={`text-gray-400 ml-auto transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
+      <ChevronDown size={16} className={`text-[var(--ink-400)] ml-auto transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
     </button>
   )
 
@@ -178,14 +183,14 @@ export function RoleDropdown({ value, onChange, disabled }: Props) {
       <div ref={ref}>
         {trigger}
         {open && (
-          <div className="fixed inset-0 z-[55] flex items-end" onClick={() => setOpen(false)}>
+          <div className="fixed inset-0 z-50 flex items-end" onClick={closeDropdown}>
             <div className="absolute inset-0 bg-black/40" />
             <div
-              className="relative w-full bg-white dark:bg-gray-900 rounded-t-2xl shadow-xl"
+              className="relative w-full bg-[var(--surface-1)] dark:bg-[var(--surface-0)] rounded-t-2xl shadow-xl"
               onClick={e => e.stopPropagation()}
             >
-              <div className="w-10 h-1 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mt-3 mb-1" />
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide px-4 py-2">Select Role</p>
+              <div className="w-10 h-1 bg-gray-200 dark:bg-[var(--surface-2)] rounded-full mx-auto mt-3 mb-1" />
+              <p className="text-xs font-semibold text-[var(--ink-400)] uppercase tracking-wide px-4 py-2">Select Role</p>
               {optionList}
               <div className="pb-safe pb-4" />
             </div>
@@ -199,7 +204,7 @@ export function RoleDropdown({ value, onChange, disabled }: Props) {
     <div ref={ref} className="relative">
       {trigger}
       {open && (
-        <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
+        <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-[var(--surface-1)] dark:bg-[var(--surface-0)] border border-[var(--line-1)] dark:border-[var(--line-1)] rounded-[var(--r-lg)] shadow-lg overflow-hidden">
           {optionList}
         </div>
       )}

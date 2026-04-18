@@ -128,22 +128,22 @@ export function EditTaskModal({ open, onClose, task }: Props) {
     onClose()
   }
 
-  const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-[9px] text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#0A5540] focus:ring-2 focus:ring-[#0A5540]/10"
-  const labelCls = "text-sm font-medium text-gray-700 block mb-1.5"
+  const inputCls = "w-full border border-[var(--line-1)] rounded-[var(--r-sm)] px-3 py-[9px] text-sm text-[var(--ink-900)] placeholder-[var(--ink-400)] focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15"
+  const labelCls = "text-sm font-medium text-[var(--ink-700)] block mb-1.5"
 
   return (
     <>
       <Modal open={open} onClose={onClose} title="Edit Task">
         {/* Tab bar — only show if task has revisions */}
         {hasRevisions && (
-          <div className="flex gap-1 mb-4 p-1 bg-gray-100 rounded-lg w-fit">
+          <div className="flex gap-1 mb-4 p-1 bg-[var(--surface-2)] rounded-[var(--r-sm)] w-fit">
             {(['details', 'revisions'] as const).map(tab => (
               <button
                 key={tab}
                 type="button"
                 onClick={() => setActiveTab(tab)}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors capitalize ${
-                  activeTab === tab ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                className={`px-3 py-1.5 text-sm font-medium rounded-[var(--r-xs)] transition-colors capitalize ${
+                  activeTab === tab ? 'bg-[var(--surface-1)] text-[var(--ink-900)] shadow-[var(--shadow-xs)]' : 'text-[var(--ink-500)] hover:text-[var(--ink-700)]'
                 }`}
               >
                 {tab}
@@ -165,18 +165,18 @@ export function EditTaskModal({ open, onClose, task }: Props) {
                 <LoadingSpinner size="sm" />
               </div>
             ) : revisions.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-8">No revision history found.</p>
+              <p className="text-sm text-[var(--ink-400)] text-center py-8">No revision history found.</p>
             ) : (
               revisions.map(rev => (
-                <div key={rev.id} className="border border-orange-100 bg-orange-50 rounded-xl p-3.5 space-y-1.5">
+                <div key={rev.id} className="border border-orange-100 bg-orange-50 rounded-[var(--r-lg)] p-3.5 space-y-1.5">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-orange-700">Revision #{rev.revision_number}</span>
-                    <span className="text-[10px] text-gray-400">{formatDate(rev.created_at)}</span>
+                    <span className="text-[10px] text-[var(--ink-400)]">{formatDate(rev.created_at)}</span>
                   </div>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{rev.feedback}</p>
+                  <p className="text-sm text-[var(--ink-700)] whitespace-pre-wrap">{rev.feedback}</p>
                   {rev.submitted_by_name && (
-                    <p className="text-xs text-gray-400">
-                      Requested by <span className="font-medium text-gray-500">{rev.submitted_by_name}</span>
+                    <p className="text-xs text-[var(--ink-400)]">
+                      Requested by <span className="font-medium text-[var(--ink-500)]">{rev.submitted_by_name}</span>
                       {rev.submitted_by_role && ` · ${rev.submitted_by_role}`}
                     </p>
                   )}
@@ -194,13 +194,13 @@ export function EditTaskModal({ open, onClose, task }: Props) {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Revision notice for assignee */}
             {task.has_active_revision && currentUser?.id === task.assignee_id && (
-              <div className="flex items-center justify-between gap-3 border border-orange-200 bg-orange-50 rounded-xl px-3.5 py-3">
+              <div className="flex items-center justify-between gap-3 border border-orange-200 bg-orange-50 rounded-[var(--r-lg)] px-3.5 py-3">
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="text-orange-500 text-base shrink-0">⟲</span>
                   <p className="text-sm font-semibold text-orange-700">Revision requested</p>
                 </div>
                 <button type="button" onClick={() => setActiveTab('revisions')}
-                  className="text-xs px-2.5 py-1 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors font-medium shrink-0">
+                  className="text-xs px-2.5 py-1 bg-orange-100 text-orange-700 rounded-[var(--r-sm)] hover:bg-orange-200 transition-colors font-medium shrink-0">
                   View feedback →
                 </button>
               </div>
@@ -254,14 +254,14 @@ export function EditTaskModal({ open, onClose, task }: Props) {
             {(currentUser?.role === 'director' || currentUser?.role === 'teamLead') && (task.creator || task.created_by_name) && (
               <div>
                 <label className={labelCls}>Assigned By</label>
-                <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                <div className="flex items-center gap-2 px-3 py-2 bg-[var(--surface-2)] border border-[var(--line-1)] rounded-[var(--r-sm)]">
                   {task.creator ? (
                     task.creator.name === task.assignee_name ? (
-                      <em className="text-xs text-gray-400">Self-assigned</em>
+                      <em className="text-xs text-[var(--ink-400)]">Self-assigned</em>
                     ) : (
                       <div className="flex items-center gap-2 flex-wrap">
                         <Avatar name={task.creator.name} size="xs" imageUrl={task.creator.avatar_url} />
-                        <span className="text-sm text-gray-600">{task.creator.name}</span>
+                        <span className="text-sm text-[var(--ink-700)]">{task.creator.name}</span>
                         {currentUser?.role === 'teamLead' && task.creator.department && task.creator.department !== currentUser.department && (
                           <span className="text-[10px] bg-purple-100 text-purple-700 rounded-full px-2 py-0.5 font-medium">
                             ↔ {task.creator.department}
@@ -272,7 +272,7 @@ export function EditTaskModal({ open, onClose, task }: Props) {
                   ) : task.created_by_name ? (
                     <>
                       <Avatar name={task.created_by_name} size="xs" />
-                      <span className="text-sm text-gray-600">{task.created_by_name}</span>
+                      <span className="text-sm text-[var(--ink-700)]">{task.created_by_name}</span>
                     </>
                   ) : null}
                 </div>
@@ -285,7 +285,7 @@ export function EditTaskModal({ open, onClose, task }: Props) {
 
             {/* Blocked by description (only shown when On Hold) */}
             {form.status === 'onHold' && (
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+              <div className="bg-slate-50 border border-slate-200 rounded-[var(--r-lg)] p-3">
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide block mb-1.5">
                   Blocked by
                 </label>
@@ -294,14 +294,14 @@ export function EditTaskModal({ open, onClose, task }: Props) {
                   onChange={e => set('blocked_by_description', e.target.value)}
                   placeholder="What is this task blocked by?"
                   rows={2}
-                  className="w-full text-sm bg-white border border-slate-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:border-[#0A5540] focus:ring-1 focus:ring-[#0A5540]/20"
+                  className="w-full text-sm bg-[var(--surface-1)] border border-slate-200 rounded-[var(--r-sm)] px-3 py-2 resize-none focus:outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)]/15"
                 />
               </div>
             )}
 
             {/* Request Revision button for done tasks */}
             {task.status === 'done' && (currentUser?.role === 'director' || currentUser?.role === 'teamLead') && !showRevisionPanel && (
-              <div className="border border-orange-200 bg-orange-50 rounded-xl p-3 flex items-center justify-between">
+              <div className="border border-orange-200 bg-orange-50 rounded-[var(--r-lg)] p-3 flex items-center justify-between">
                 <div>
                   <p className="text-sm font-semibold text-orange-700">Task is marked Done</p>
                   {task.revision_count && task.revision_count > 0 && (
@@ -311,7 +311,7 @@ export function EditTaskModal({ open, onClose, task }: Props) {
                 <button
                   type="button"
                   onClick={() => setShowRevisionPanel(true)}
-                  className="text-xs px-3 py-1.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium"
+                  className="text-xs px-3 py-1.5 bg-orange-500 text-white rounded-[var(--r-sm)] hover:bg-orange-600 transition-colors font-medium"
                 >
                   ← Reopen as Revision
                 </button>
@@ -320,18 +320,18 @@ export function EditTaskModal({ open, onClose, task }: Props) {
 
             {/* Revision panel (inline) */}
             {showRevisionPanel && (
-              <div className="border border-orange-200 bg-orange-50 rounded-xl p-4 space-y-3">
+              <div className="border border-orange-200 bg-orange-50 rounded-[var(--r-lg)] p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-bold text-orange-700">Request Revision</p>
                   <button type="button" onClick={() => { setShowRevisionPanel(false); setRevisionFeedback('') }}
-                    className="text-gray-400 hover:text-gray-600 text-xs">Cancel</button>
+                    className="text-[var(--ink-400)] hover:text-[var(--ink-700)] text-xs">Cancel</button>
                 </div>
                 <textarea
                   value={revisionFeedback}
                   onChange={e => setRevisionFeedback(e.target.value)}
                   placeholder="Describe what needs to be revised..."
                   rows={3}
-                  className="w-full text-sm bg-white border border-orange-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:border-orange-400"
+                  className="w-full text-sm bg-[var(--surface-1)] border border-orange-200 rounded-[var(--r-sm)] px-3 py-2 resize-none focus:outline-none focus:border-orange-400"
                   autoFocus
                 />
                 <button
@@ -352,8 +352,6 @@ export function EditTaskModal({ open, onClose, task }: Props) {
                       })
                       await updateTask(task.id, {
                         status: 'inProgress',
-                        has_active_revision: true,
-                        revision_count: (task.revision_count || 0) + 1,
                       })
                       // Notify assignee
                       if (task.assignee_id) {
@@ -374,31 +372,31 @@ export function EditTaskModal({ open, onClose, task }: Props) {
                       setSubmittingRevision(false)
                     }
                   }}
-                  className="w-full py-2 text-sm font-medium bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+                  className="w-full py-2 text-sm font-medium bg-orange-500 text-white rounded-[var(--r-sm)] hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:pointer-events-none"
                 >
                   {submittingRevision ? 'Submitting...' : 'Submit & Reopen Task'}
                 </button>
               </div>
             )}
 
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-[var(--ink-400)]">
               Created on {formatDate(task.created_at)}
             </p>
 
             <div className="flex items-center justify-between pt-2">
               {currentUser?.role !== 'member' ? (
                 <button type="button" onClick={() => setShowDelete(true)}
-                  className="px-4 py-2 text-sm font-medium text-red-500 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors">
+                  className="px-4 py-2 text-sm font-medium text-red-500 bg-[var(--surface-1)] border border-red-200 rounded-[var(--r-sm)] hover:bg-red-50 transition-colors">
                   Delete
                 </button>
               ) : <div />}
               <div className="flex gap-3">
                 <button type="button" onClick={onClose}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                  className="px-4 py-2 text-sm font-medium text-[var(--ink-700)] bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-sm)] hover:bg-[var(--surface-2)] transition-colors">
                   Cancel
                 </button>
                 <button type="submit" disabled={loading}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0A5540] rounded-lg hover:bg-[#0d6b51] transition-colors disabled:opacity-70 disabled:pointer-events-none">
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[var(--primary)] rounded-[var(--r-sm)] hover:bg-[var(--primary-700)] transition-colors disabled:opacity-70 disabled:pointer-events-none">
                   {loading && <LoadingSpinner size="sm" color="white" />}
                   Save Changes
                 </button>

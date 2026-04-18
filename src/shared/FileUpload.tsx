@@ -27,15 +27,17 @@ export function FileUpload({ onFiles, files, onRemove, accept = '*', maxSize = 1
         onDragOver={e => { e.preventDefault(); setDragging(true) }}
         onDragLeave={() => setDragging(false)}
         onDrop={e => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files) }}
-        className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
+        className={`border border-dashed rounded-[var(--r-lg)] p-8 text-center cursor-pointer transition-all duration-200 ${
           dragging
-            ? 'border-[#0A5540] bg-[#edf8f4]'
-            : 'border-gray-200 hover:border-gray-300'
+            ? 'border-[var(--primary)] bg-[var(--primary-50)] scale-[1.01]'
+            : 'border-[var(--line-2)] hover:border-[var(--primary-300)] hover:bg-[var(--surface-2)]'
         }`}
       >
-        <CloudUpload size={24} className="mx-auto text-gray-400 mb-2" />
-        <p className="text-sm text-gray-500">Drop files here or click to upload</p>
-        <p className="text-xs text-gray-400 mt-0.5">Max {Math.round(maxSize / (1024 * 1024))}MB per file</p>
+        <div className={`mx-auto w-10 h-10 rounded-full flex items-center justify-center mb-2.5 transition-colors ${dragging ? 'bg-[var(--primary)]/10' : 'bg-[var(--surface-2)]'}`}>
+          <CloudUpload size={18} className={dragging ? 'text-[var(--primary)]' : 'text-[var(--ink-400)]'} strokeWidth={1.8} />
+        </div>
+        <p className="text-[13px] font-medium text-[var(--ink-700)]">Drop files here or click to upload</p>
+        <p className="text-[11px] text-[var(--ink-400)] mt-1 font-mono tabular-nums">Max {Math.round(maxSize / (1024 * 1024))}MB per file</p>
         <input
           ref={inputRef}
           type="file"
@@ -47,16 +49,16 @@ export function FileUpload({ onFiles, files, onRemove, accept = '*', maxSize = 1
       </div>
 
       {files.length > 0 && (
-        <ul className="mt-3 space-y-2">
+        <ul className="mt-3 space-y-1.5">
           {files.map((file, i) => (
-            <li key={i} className="flex items-center gap-3 bg-gray-50 rounded-lg px-3 py-2">
+            <li key={i} className="flex items-center gap-3 bg-[var(--surface-2)] border border-[var(--line-1)] rounded-[var(--r-sm)] px-3 py-2">
               <span className="text-lg">{getFileIcon(file.type)}</span>
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-800 truncate">{file.name}</p>
-                <p className="text-xs text-gray-400">{formatFileSize(file.size)}</p>
+                <p className="text-[13px] text-[var(--ink-900)] truncate">{file.name}</p>
+                <p className="text-[11px] text-[var(--ink-400)] font-mono tabular-nums">{formatFileSize(file.size)}</p>
               </div>
-              <button onClick={() => onRemove(i)} className="text-gray-400 hover:text-red-500 transition-colors">
-                <X size={14} />
+              <button onClick={() => onRemove(i)} className="text-[var(--ink-400)] hover:text-red-500 transition-colors p-1" aria-label="Remove file">
+                <X size={13} />
               </button>
             </li>
           ))}

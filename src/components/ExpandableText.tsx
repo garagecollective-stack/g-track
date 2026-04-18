@@ -19,7 +19,7 @@ export function ExpandableText({ text, maxLength = 100, className = '' }: Props)
 
   return (
     <div className={className}>
-      <span className="text-sm text-gray-500 leading-relaxed whitespace-pre-wrap break-words">
+      <span className="text-sm text-[var(--ink-500)] leading-relaxed whitespace-pre-wrap break-words">
         {linkifyText(displayText)}
       </span>
       {isLong && (
@@ -29,7 +29,7 @@ export function ExpandableText({ text, maxLength = 100, className = '' }: Props)
             e.stopPropagation()
             setExpanded(prev => !prev)
           }}
-          className="ml-1.5 text-xs font-medium text-[#0A5540] hover:underline focus:outline-none shrink-0"
+          className="ml-1.5 text-xs font-medium text-[var(--primary)] hover:underline focus:outline-none shrink-0"
         >
           {expanded ? 'Read less' : 'Read more'}
         </button>

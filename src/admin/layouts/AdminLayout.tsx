@@ -24,10 +24,10 @@ function AdminNavItem({ to, icon: Icon, label }: { to: string; icon: React.Eleme
       end={to === '/super-admin/dashboard'}
     >
       {({ isActive }) => (
-        <div className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
+        <div className={`flex items-center gap-3 px-3 py-2.5 rounded-[var(--r-lg)] text-sm font-medium transition-colors cursor-pointer ${
           isActive
-            ? 'bg-[#0A5540] text-white shadow-sm'
-            : 'text-gray-500 hover:text-white hover:bg-[#0A5540]'
+            ? 'bg-[var(--primary)] text-white shadow-sm'
+            : 'text-[var(--ink-500)] hover:text-white hover:bg-[var(--primary)]'
         }`}>
           <Icon size={17} />
           <span>{label}</span>
@@ -44,7 +44,7 @@ export function AdminLayout() {
 
   if (adminLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--surface-2)]">
         <LoadingSpinner size="lg" />
       </div>
     )
@@ -57,12 +57,12 @@ export function AdminLayout() {
     navigate('/super-admin/login')
   }
 
-  const Sidebar = () => (
+  const renderSidebar = () => (
     <div className="flex flex-col h-full">
       {/* Brand */}
-      <div className="px-4 py-4 border-b border-gray-200">
+      <div className="px-4 py-4 border-b border-[var(--line-1)]">
         <img src={logoImg} alt="G-Track" className="h-8 w-auto mb-1" />
-        <p className="text-[10px] text-gray-500 font-medium">Super Admin Panel</p>
+        <p className="text-[10px] text-[var(--ink-500)] font-medium">Super Admin Panel</p>
       </div>
 
       {/* Nav */}
@@ -71,19 +71,19 @@ export function AdminLayout() {
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-gray-200 p-3">
+      <div className="border-t border-[var(--line-1)] p-3">
         <div className="flex items-center gap-2.5 px-2 py-2 mb-2">
-          <div className="w-8 h-8 rounded-full bg-[#0A5540] flex items-center justify-center text-white text-xs font-bold shrink-0">
+          <div className="w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-white text-xs font-bold shrink-0">
             {getInitials(adminUser.name)}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-900 truncate">{adminUser.name}</p>
-            <p className="text-xs text-gray-500 truncate">{adminUser.email}</p>
+            <p className="text-sm font-semibold text-[var(--ink-900)] truncate">{adminUser.name}</p>
+            <p className="text-xs text-[var(--ink-500)] truncate">{adminUser.email}</p>
           </div>
         </div>
         <button
           onClick={handleSignOut}
-          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors font-medium"
+          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:text-red-600 hover:bg-red-50 rounded-[var(--r-lg)] transition-colors font-medium"
         >
           <LogOut size={14} /> Sign Out
         </button>
@@ -92,10 +92,10 @@ export function AdminLayout() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-[var(--surface-2)] flex">
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex flex-col w-60 shrink-0 bg-white border-r border-gray-200 sticky top-0 h-screen overflow-y-auto">
-        <Sidebar />
+      <aside className="hidden md:flex flex-col w-60 shrink-0 bg-[var(--surface-1)] border-r border-[var(--line-1)] sticky top-0 h-screen overflow-y-auto">
+        {renderSidebar()}
       </aside>
 
       {/* Mobile sidebar overlay */}
@@ -106,10 +106,10 @@ export function AdminLayout() {
         >
           <div className="absolute inset-0 bg-black/40" />
           <aside
-            className="absolute left-0 top-0 bottom-0 w-56 bg-white border-r border-gray-200 flex flex-col"
+            className="absolute left-0 top-0 bottom-0 w-56 bg-[var(--surface-1)] border-r border-[var(--line-1)] flex flex-col"
             onClick={e => e.stopPropagation()}
           >
-            <Sidebar />
+            {renderSidebar()}
           </aside>
         </div>
       )}
@@ -117,16 +117,16 @@ export function AdminLayout() {
       {/* Main content */}
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Mobile topbar */}
-        <header className="md:hidden h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-3 sticky top-0 z-40">
+        <header className="md:hidden h-14 bg-[var(--surface-1)] border-b border-[var(--line-1)] flex items-center px-4 gap-3 sticky top-0 z-40">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="p-2 text-gray-500 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+            className="p-2 text-[var(--ink-500)] hover:text-[var(--ink-700)] rounded-[var(--r-sm)] hover:bg-[var(--surface-2)] transition-colors"
           >
             <Menu size={20} />
           </button>
           <div className="flex items-center gap-2">
             <img src={logoImg} alt="G-Track" className="h-7 w-auto" />
-            <span className="text-xs font-semibold text-gray-500">Admin</span>
+            <span className="text-xs font-semibold text-[var(--ink-500)]">Admin</span>
           </div>
         </header>
 

@@ -1,10 +1,11 @@
 import {
   createContext, useContext, useState,
-  useEffect, useRef, useCallback,
+  useEffect, useRef, useCallback, useMemo,
 } from 'react'
 import { supabase } from '../lib/supabase'
 import { useApp } from './AppContext'
 import { playNotificationSound, isSoundEnabled } from '../services/notificationSound'
+import { triggerPushNotification } from '../services/pushNotifications'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -30,6 +31,10 @@ export interface ChatMessage {
   read_by: string[]
   delivered_to: string[]
   created_at: string
+  is_pinned?: boolean
+  pinned_at?: string | null
+  pinned_by?: string | null
+  thread_root_id?: string | null
   sender?: ChatProfile | null
   // Client-side stitched from loaded messages (no PostgREST self-join needed)
   reply_to?: {
@@ -51,16 +56,28 @@ export interface RoomMember {
   user_status?: string
   last_seen?: string | null
   last_read_at: string
+  status_text?: string | null
+  status_emoji?: string | null
+  status_expires_at?: string | null
+  dnd_until?: string | null
 }
 
 export interface ChatRoom {
   id: string
-  type: 'department' | 'dm'
+  type: 'department' | 'dm' | 'group'
   department: string | null
   name: string
+  avatar_emoji?: string | null
+  created_by?: string | null
   members: RoomMember[]
   last_message?: ChatMessage | null
   unread_count: number
+}
+
+interface ChatRoomMemberRow {
+  user_id: string
+  last_read_at: string
+  profiles?: Partial<RoomMember> | Partial<RoomMember>[] | null
 }
 
 // ── MSG_SELECT — no self-referential join (causes PostgREST 400) ───────────────
@@ -85,13 +102,23 @@ interface ChatContextType {
   isOpen: boolean
   openChat: (roomId?: string | null) => void
   closeChat: () => void
-  sendMessage: (roomId: string, message: string, replyToId?: string) => Promise<void>
+  sendMessage: (roomId: string, message: string, replyToId?: string, threadRootId?: string) => Promise<void>
+  markThreadRead: (threadRootId: string) => Promise<void>
+  threadUnread: Record<string, number>
+  threadReplyCounts: Record<string, number>
   toggleReaction: (messageId: string, emoji: string) => Promise<void>
   deleteForMe: (messageId: string) => Promise<void>
   deleteForEveryone: (messageId: string) => Promise<void>
   sendTyping: (roomId: string) => Promise<void>
   startDM: (otherUserId: string) => Promise<string | null>
+  createGroup: (name: string, memberIds: string[], avatarEmoji?: string | null) => Promise<string | null>
+  updateGroup: (roomId: string, name: string | null, avatarEmoji: string | null) => Promise<boolean>
+  addGroupMembers: (roomId: string, memberIds: string[]) => Promise<boolean>
+  removeGroupMember: (roomId: string, memberId: string) => Promise<boolean>
+  deleteGroup: (roomId: string) => Promise<boolean>
+  togglePin: (messageId: string) => Promise<void>
   addDirectorToRoom: (roomId: string, directorId: string) => Promise<void>
+  addMembersToRoom: (roomId: string, userIds: string[]) => Promise<void>
   fetchRooms: () => Promise<void>
   markRoomAsRead: (roomId: string) => Promise<void>
   markRead: (roomId: string) => Promise<void>
@@ -147,6 +174,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   const bgChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   const [unreadThreshold, setUnreadThreshold] = useState<string | null>(null)
+  const [threadReads, setThreadReads] = useState<Record<string, string>>({})
 
   // Fix A — track whether rooms have been lazy-loaded
   const roomsFetchedRef = useRef(false)
@@ -203,6 +231,31 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     setRooms(prev => prev.map(r => r.id === roomId ? { ...r, unread_count: 0 } : r))
   }, [currentUser?.id])
 
+  // ── Thread read tracking ────────────────────────────────────────────────────
+
+  const fetchThreadReads = useCallback(async () => {
+    if (!currentUser?.id) return
+    const { data, error } = await supabase
+      .from('chat_thread_reads')
+      .select('thread_root_id, last_read_at')
+      .eq('user_id', currentUser.id)
+    if (error || !data) return
+    const map: Record<string, string> = {}
+    data.forEach(r => { map[r.thread_root_id] = r.last_read_at })
+    setThreadReads(map)
+  }, [currentUser?.id])
+
+  const markThreadRead = useCallback(async (threadRootId: string) => {
+    if (!currentUser?.id) return
+    const now = new Date().toISOString()
+    setThreadReads(prev => ({ ...prev, [threadRootId]: now }))
+    await supabase.rpc('chat_mark_thread_read', { p_thread_root_id: threadRootId })
+  }, [currentUser?.id])
+
+  useEffect(() => {
+    if (currentUser?.id) fetchThreadReads()
+  }, [currentUser?.id, fetchThreadReads])
+
   // ── markRead (per-message read_by) ─────────────────────────────────────────
 
   const markRead = useCallback(async (roomId: string) => {
@@ -210,18 +263,32 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const unread = messages.filter(
       m => m.sender_id !== currentUser.id && !(m.read_by ?? []).includes(currentUser.id)
     )
-    for (const m of unread) {
-      const readBy = m.read_by ?? []
-      if (!readBy.includes(currentUser.id)) {
+
+    await Promise.all(
+      unread.map(async (message) => {
+        const readBy = message.read_by ?? []
+        if (readBy.includes(currentUser.id)) return
+
         await supabase
           .from('chat_messages')
           .update({ read_by: [...readBy, currentUser.id] })
-          .eq('id', m.id)
-        setMessages(prev => prev.map(msg =>
-          msg.id === m.id ? { ...msg, read_by: [...readBy, currentUser.id!] } : msg
-        ))
-      }
+          .eq('id', message.id)
+      })
+    )
+
+    if (unread.length > 0) {
+      setMessages(prev => prev.map(message => (
+        unread.some(unreadMessage => unreadMessage.id === message.id)
+          ? {
+              ...message,
+              read_by: message.read_by?.includes(currentUser.id)
+                ? message.read_by
+                : [...(message.read_by ?? []), currentUser.id],
+            }
+          : message
+      )))
     }
+
     await markRoomAsRead(roomId)
   }, [currentUser?.id, messages, markRoomAsRead])
 
@@ -229,17 +296,21 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   const markDelivered = useCallback(async (messageIds: string[]) => {
     if (!currentUser?.id || !messageIds.length) return
-    for (const id of messageIds) {
-      const msg = messages.find(m => m.id === id)
-      if (!msg) continue
-      const delivered = msg.delivered_to ?? []
-      if (!delivered.includes(currentUser.id)) {
+
+    await Promise.all(
+      messageIds.map(async (id) => {
+        const msg = messages.find(m => m.id === id)
+        if (!msg) return
+
+        const delivered = msg.delivered_to ?? []
+        if (delivered.includes(currentUser.id)) return
+
         await supabase
           .from('chat_messages')
           .update({ delivered_to: [...delivered, currentUser.id] })
           .eq('id', id)
-      }
-    }
+      })
+    )
   }, [currentUser?.id, messages])
 
   // ── fetchRooms ──────────────────────────────────────────────────────────────
@@ -268,13 +339,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       roomData.map(async (room) => {
         const { data: memberProfiles } = await supabase
           .from('chat_room_members')
-          .select('user_id, last_read_at, profiles!chat_room_members_user_id_fkey(id, name, avatar_url, role, department, is_active, user_status, last_seen)')
+          .select('user_id, last_read_at, profiles!chat_room_members_user_id_fkey(id, name, avatar_url, role, department, is_active, user_status, last_seen, status_text, status_emoji, status_expires_at, dnd_until)')
           .eq('room_id', room.id)
 
-        const members: RoomMember[] = (memberProfiles ?? []).map((m: any) => ({
-          ...(m.profiles ?? {}),
+        const members: RoomMember[] = ((memberProfiles ?? []) as unknown as ChatRoomMemberRow[]).map((m) => ({
+          ...(Array.isArray(m.profiles) ? (m.profiles[0] ?? {}) : (m.profiles ?? {})),
           last_read_at: m.last_read_at,
-        })).filter((m: RoomMember) => m.id)
+        })).filter((m): m is RoomMember => !!m.id)
 
         const { data: lastMsgData } = await supabase
           .from('chat_messages')
@@ -352,6 +423,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     roomId: string,
     message: string,
     replyToId?: string,
+    threadRootId?: string,
   ) => {
     if (!currentUser?.id || !message.trim()) return
     setSendingMessage(true)
@@ -364,6 +436,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       sender_id: currentUser.id,
       message: message.trim(),
       reply_to_id: replyToId ?? null,
+      thread_root_id: threadRootId ?? null,
       reactions: {},
       is_deleted: false,
       deleted_for_everyone: false,
@@ -398,6 +471,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         sender_id: currentUser.id,
         message: message.trim(),
         reply_to_id: replyToId ?? null,
+        thread_root_id: threadRootId ?? null,
       })
       .select(MSG_SELECT)
       .single()
@@ -407,7 +481,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const stitched = stitchReplyTo([...messages, msg])
       const stitchedMsg = stitched.find(m => m.id === msg.id) ?? msg
       setMessages(prev => prev.map(m => m.id === tempId ? stitchedMsg : m))
-      setRooms(prev => prev.map(r => r.id === roomId ? { ...r, last_message: msg } : r))
+      if (!threadRootId) {
+        setRooms(prev => prev.map(r => r.id === roomId ? { ...r, last_message: msg } : r))
+      }
       markRoomAsRead(roomId)
     } else {
       setMessages(prev => prev.filter(m => m.id !== tempId))
@@ -562,6 +638,134 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     await fetchRooms()
   }, [fetchRooms])
 
+  // ── addMembersToRoom — bulk add to an existing group ───────────────────────
+
+  const addMembersToRoom = useCallback(async (roomId: string, userIds: string[]) => {
+    if (!userIds.length) return
+    await supabase.from('chat_room_members').insert(
+      userIds.map(id => ({ room_id: roomId, user_id: id }))
+    )
+    await fetchRooms()
+  }, [fetchRooms])
+
+  // ── createGroup — WhatsApp-style user-created group ────────────────────────
+
+  const createGroup = useCallback(async (
+    name: string,
+    memberIds: string[],
+    avatarEmoji: string | null = null,
+  ): Promise<string | null> => {
+    if (!currentUser?.id || !name.trim()) return null
+
+    const { data, error } = await supabase.rpc('chat_create_group', {
+      p_name: name.trim(),
+      p_member_ids: memberIds,
+      p_avatar_emoji: avatarEmoji,
+    })
+
+    if (error || !data) {
+      addToast({ type: 'error', title: 'Could not create group', message: error?.message ?? 'Unknown error' })
+      return null
+    }
+
+    const roomId = data as string
+    await fetchRooms()
+    setActiveRoomId(roomId)
+    return roomId
+  }, [currentUser?.id, fetchRooms, addToast])
+
+  // ── updateGroup — rename / re-emoji (creator only) ─────────────────────────
+
+  const updateGroup = useCallback(async (
+    roomId: string,
+    name: string | null,
+    avatarEmoji: string | null,
+  ): Promise<boolean> => {
+    const { error } = await supabase.rpc('chat_update_group', {
+      p_room_id: roomId,
+      p_name: name,
+      p_avatar_emoji: avatarEmoji,
+    })
+    if (error) {
+      addToast({ type: 'error', title: 'Could not update group', message: error.message })
+      return false
+    }
+    await fetchRooms()
+    return true
+  }, [fetchRooms, addToast])
+
+  // ── addGroupMembers — creator bulk-adds members ────────────────────────────
+
+  const addGroupMembers = useCallback(async (roomId: string, memberIds: string[]): Promise<boolean> => {
+    if (!memberIds.length) return true
+    const { error } = await supabase.rpc('chat_add_group_members', {
+      p_room_id: roomId,
+      p_member_ids: memberIds,
+    })
+    if (error) {
+      addToast({ type: 'error', title: 'Could not add members', message: error.message })
+      return false
+    }
+    await fetchRooms()
+    return true
+  }, [fetchRooms, addToast])
+
+  // ── removeGroupMember — creator removes, or user removes self (leave) ─────
+
+  const removeGroupMember = useCallback(async (roomId: string, memberId: string): Promise<boolean> => {
+    const { error } = await supabase.rpc('chat_remove_group_member', {
+      p_room_id: roomId,
+      p_member_id: memberId,
+    })
+    if (error) {
+      addToast({ type: 'error', title: 'Could not remove member', message: error.message })
+      return false
+    }
+    // If current user left, clear active room
+    if (memberId === currentUser?.id && activeRoomIdRef.current === roomId) {
+      setActiveRoomId(null)
+    }
+    await fetchRooms()
+    return true
+  }, [fetchRooms, addToast, currentUser?.id])
+
+  // ── deleteGroup — creator nukes the entire group ───────────────────────────
+
+  const deleteGroup = useCallback(async (roomId: string): Promise<boolean> => {
+    const { error } = await supabase.rpc('chat_delete_group', { p_room_id: roomId })
+    if (error) {
+      addToast({ type: 'error', title: 'Could not delete group', message: error.message })
+      return false
+    }
+    if (activeRoomIdRef.current === roomId) setActiveRoomId(null)
+    await fetchRooms()
+    return true
+  }, [fetchRooms, addToast])
+
+  // ── togglePin — pin / unpin a message (any room member) ────────────────────
+
+  const togglePin = useCallback(async (messageId: string) => {
+    // Optimistic flip in the active-room message list
+    setMessages(prev => prev.map(m =>
+      m.id === messageId
+        ? {
+            ...m,
+            is_pinned: !m.is_pinned,
+            pinned_at: !m.is_pinned ? new Date().toISOString() : null,
+            pinned_by: !m.is_pinned ? currentUser?.id ?? null : null,
+          }
+        : m
+    ))
+    const { error } = await supabase.rpc('chat_toggle_pin', { p_message_id: messageId })
+    if (error) {
+      addToast({ type: 'error', title: 'Could not update pin', message: error.message })
+      // Revert
+      setMessages(prev => prev.map(m =>
+        m.id === messageId ? { ...m, is_pinned: !m.is_pinned } : m
+      ))
+    }
+  }, [addToast, currentUser?.id])
+
   // ── Fix C — Background channel: ONE channel, membership-filtered client-side ─
 
   useEffect(() => {
@@ -592,6 +796,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           if (newMsg.sender_id === currentUserRef.current?.id) return
           // If this room is actively open and visible, the per-room subscription handles it
           if (isOpenRef.current && activeRoomIdRef.current === newMsg.room_id) return
+          // Thread replies don't bump the room-level unread — they show inside the thread only
+          if (newMsg.thread_root_id) return
 
           // Update unread count in rooms state
           setRooms(prev => prev.map(r =>
@@ -611,16 +817,24 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           const senderName = sender?.name ?? 'Someone'
           const displayName = room ? (room.type === 'dm' ? senderName : room.name) : senderName
 
+          const preview = (newMsg.message || '').slice(0, 80) || 'New message'
+          const chatTitle = `💬 ${displayName}`
+
           addToastRef.current({
             type: 'info',
-            title: `💬 ${displayName}`,
-            message: (newMsg.message || '').slice(0, 80) || 'New message',
+            title: chatTitle,
+            message: preview,
           })
 
           // Play chat notification sound
           if (isSoundEnabled()) {
             playNotificationSound('chat')
           }
+
+          // OS-level notification when tab is hidden
+          triggerPushNotification(chatTitle, preview, undefined, {
+            tag: `chat-${newMsg.room_id}`,
+          })
         })
         .subscribe()
 
@@ -670,9 +884,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             return stitched
           })
           markRoomAsRead(activeRoomId)
-          setRooms(prev => prev.map(r =>
-            r.id === activeRoomId ? { ...r, last_message: data as ChatMessage } : r
-          ))
+          if (!(data as ChatMessage).thread_root_id) {
+            setRooms(prev => prev.map(r =>
+              r.id === activeRoomId ? { ...r, last_message: data as ChatMessage } : r
+            ))
+          }
         }
       })
       .on('postgres_changes', {
@@ -730,6 +946,32 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   }, [activeRoomId, currentUser?.id, isOpen])
 
+  // ── Thread reply aggregates ─────────────────────────────────────────────────
+
+  const threadReplyCounts = useMemo(() => {
+    const map: Record<string, number> = {}
+    messages.forEach(m => {
+      if (m.thread_root_id && !m.deleted_for_everyone) {
+        map[m.thread_root_id] = (map[m.thread_root_id] ?? 0) + 1
+      }
+    })
+    return map
+  }, [messages])
+
+  const threadUnread = useMemo(() => {
+    if (!currentUser?.id) return {}
+    const map: Record<string, number> = {}
+    messages.forEach(m => {
+      if (!m.thread_root_id || m.deleted_for_everyone) return
+      if (m.sender_id === currentUser.id) return
+      const cursor = threadReads[m.thread_root_id]
+      if (!cursor || new Date(m.created_at).getTime() > new Date(cursor).getTime()) {
+        map[m.thread_root_id] = (map[m.thread_root_id] ?? 0) + 1
+      }
+    })
+    return map
+  }, [messages, threadReads, currentUser?.id])
+
   // ── Context value ───────────────────────────────────────────────────────────
 
   return (
@@ -739,9 +981,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       isOpen, openChat, closeChat,
       sendMessage, toggleReaction,
       deleteForMe, deleteForEveryone,
-      sendTyping, startDM, addDirectorToRoom,
+      sendTyping, startDM, createGroup, updateGroup, addGroupMembers, removeGroupMember, deleteGroup, togglePin, addDirectorToRoom, addMembersToRoom,
       fetchRooms, markRoomAsRead, markRead, markDelivered,
       unreadThreshold,
+      markThreadRead, threadUnread, threadReplyCounts,
     }}>
       {children}
     </ChatContext.Provider>

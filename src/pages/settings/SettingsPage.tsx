@@ -23,8 +23,8 @@ export function SettingsPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-gray-900">Settings</h1>
-        <p className="text-sm text-gray-500 mt-1">Manage your workspace, team, and preferences</p>
+        <h1 className="text-xl font-bold text-[var(--ink-900)]">Settings</h1>
+        <p className="text-sm text-[var(--ink-500)] mt-1">Manage your workspace, team, and preferences</p>
       </div>
 
       <Tabs tabs={TABS} active={activeTab} onChange={setActiveTab} />

@@ -41,25 +41,25 @@ export function DeleteDepartmentModal({ open, onClose, department }: Props) {
   return (
     <Modal open={open} onClose={onClose} title="Delete Department" size="sm">
       <div className="space-y-4">
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-[var(--r-sm)] p-3 text-sm text-yellow-800">
           This department has <strong>{deptProjects} project{deptProjects !== 1 ? 's' : ''}</strong> and <strong>{deptMembers} member{deptMembers !== 1 ? 's' : ''}</strong>.
         </div>
         {deptProjects > 0 ? (
           <p className="text-sm text-red-600">Archive or reassign all projects first before deleting this department.</p>
         ) : (
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1.5">
+            <label className="text-sm font-medium text-[var(--ink-700)] block mb-1.5">
               Type <span className="font-mono font-semibold">"{department.name}"</span> to confirm
             </label>
             <input type="text" value={typed} onChange={e => setTyped(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none"
+              className="w-full border border-[var(--line-1)] rounded-[var(--r-sm)] px-3 py-2 text-sm focus:outline-none"
               placeholder={department.name} />
           </div>
         )}
         <div className="flex justify-end gap-3">
-          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
+          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-[var(--ink-700)] border border-[var(--line-1)] rounded-[var(--r-sm)] hover:bg-[var(--surface-2)] transition-colors">Cancel</button>
           <button onClick={handleDelete} disabled={!canDelete || loading}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:pointer-events-none">
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-[var(--r-sm)] hover:bg-red-600 transition-colors disabled:opacity-50 disabled:pointer-events-none">
             {loading && <LoadingSpinner size="sm" color="white" />} Delete
           </button>
         </div>

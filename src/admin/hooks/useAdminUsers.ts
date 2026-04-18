@@ -1,14 +1,23 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabaseAdmin, db } from '../../lib/supabaseAdmin'
+import { adminApi } from '../../lib/adminApi'
+import { db } from '../../lib/supabaseAdmin'
 import type { Profile, Role } from '../../types'
 
 export interface AdminUserPayload {
   name:        string
   email:       string
-  password:    string
   role:        Role
   department:  string
   manager_ids: string[]
+}
+
+interface ProfileManagerRow {
+  profile_id: string
+  manager_id: string
+}
+
+type ProfileUpdatePayload = Partial<Pick<Profile, 'name' | 'role' | 'department' | 'is_active'>> & {
+  manager_ids?: string[]
 }
 
 export function useAdminUsers() {
@@ -39,13 +48,13 @@ export function useAdminUsers() {
 
     const managersMap = new Map<string, string[]>()
     if (managersData) {
-      for (const row of managersData as any[]) {
+      for (const row of managersData as ProfileManagerRow[]) {
         const existing = managersMap.get(row.profile_id) || []
         managersMap.set(row.profile_id, [...existing, row.manager_id])
       }
     }
 
-    const mapped = (data || []).map((u: any) => ({
+    const mapped = (data || []).map((u) => ({
       ...u,
       manager_ids: managersMap.get(u.id) || [],
     }))
@@ -54,36 +63,22 @@ export function useAdminUsers() {
     setLoading(false)
   }, [])
 
-  useEffect(() => { fetchUsers() }, [fetchUsers])
+  useEffect(() => {
+    void fetchUsers()
+  }, [fetchUsers])
 
   const createUser = async (payload: AdminUserPayload) => {
-    const { data, error } = await supabaseAdmin.auth.admin.createUser({
-      email:         payload.email,
-      password:      payload.password,
-      email_confirm: true,
-      user_metadata: { name: payload.name, department: payload.department },
+    const { user } = await adminApi.createUser({
+      name: payload.name,
+      email: payload.email,
+      role: payload.role,
+      department: payload.department || null,
+      manager_id: payload.manager_ids[0] ?? null,
     })
-    if (error) throw error
-
-    const { error: profileError } = await db
-      .from('profiles')
-      .upsert({
-        id:         data.user.id,
-        email:      payload.email,
-        name:       payload.name,
-        role:       payload.role,
-        department: payload.department || null,
-        is_active:  true,
-      }, { onConflict: 'id' })
-
-    if (profileError) {
-      await supabaseAdmin.auth.admin.deleteUser(data.user.id)
-      throw new Error(profileError.message)
-    }
 
     if (payload.manager_ids.length > 0) {
       const { error: managerErr } = await db.from('profile_managers').insert(
-        payload.manager_ids.map(mid => ({ profile_id: data.user.id, manager_id: mid }))
+        payload.manager_ids.map(mid => ({ profile_id: user.id, manager_id: mid }))
       )
       if (managerErr) console.warn('profile_managers insert skipped:', managerErr.message)
     }
@@ -91,12 +86,11 @@ export function useAdminUsers() {
     await fetchUsers()
   }
 
-  const updateUser = async (id: string, updates: Partial<Profile>) => {
-    const { manager_ids, profile_managers: _, ...profileUpdates } = updates as any
+  const updateUser = async (id: string, updates: ProfileUpdatePayload) => {
+    const { manager_ids, ...profileUpdates } = updates
 
     if (Object.keys(profileUpdates).length > 0) {
-      const { error } = await db.from('profiles').update(profileUpdates).eq('id', id)
-      if (error) throw new Error(error.message)
+      await adminApi.updateUser(id, profileUpdates)
     }
 
     if (manager_ids !== undefined) {
@@ -112,8 +106,7 @@ export function useAdminUsers() {
   }
 
   const deleteUser = async (id: string) => {
-    const { error } = await supabaseAdmin.auth.admin.deleteUser(id)
-    if (error) throw error
+    await adminApi.deleteUser(id)
     await fetchUsers()
   }
 
@@ -130,7 +123,7 @@ export function useAdminUsers() {
   }
 
   const changeManagers = async (id: string, manager_ids: string[]) => {
-    await updateUser(id, { manager_ids } as any)
+    await updateUser(id, { manager_ids })
   }
 
   return {

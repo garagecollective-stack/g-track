@@ -24,10 +24,10 @@ import { friendlyError, formatDate, isOverdue, timeAgo } from '../../utils/helpe
 import type { TaskStatus, Issue } from '../../types'
 
 const STATUS_STYLE: Record<string, string> = {
-  open: 'bg-red-100 text-red-700',
-  in_review: 'bg-blue-100 text-blue-700',
-  resolved: 'bg-green-100 text-green-700',
-  closed: 'bg-gray-100 text-gray-600',
+  open:      'bg-red-50 text-red-700 ring-1 ring-inset ring-red-200 dark:bg-red-950/40 dark:text-red-300 dark:ring-red-900/60',
+  in_review: 'bg-[var(--primary-50)] text-[var(--primary-700)] ring-1 ring-inset ring-[var(--primary-200)]',
+  resolved:  'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/60',
+  closed:    'bg-[var(--surface-2)] text-[var(--ink-500)] ring-1 ring-inset ring-[var(--line-2)]',
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -39,9 +39,9 @@ const STATUS_LABEL: Record<string, string> = {
 
 const PRIORITY_DOT: Record<string, string> = {
   urgent: 'bg-red-500',
-  high: 'bg-orange-500',
-  medium: 'bg-yellow-500',
-  low: 'bg-gray-400',
+  high:   'bg-orange-500',
+  medium: 'bg-amber-500',
+  low:    'bg-[var(--ink-400)]',
 }
 
 export function ProjectDetailPage() {
@@ -99,8 +99,8 @@ export function ProjectDetailPage() {
   if (!id) return null
   if (!project && projects.length > 0) return (
     <div className="flex flex-col items-center justify-center h-64">
-      <p className="text-gray-500">Project not found</p>
-      <Link to="/app/dashboard" className="mt-2 text-[#0A5540] text-sm hover:underline">Back to Dashboard</Link>
+      <p className="text-[var(--ink-500)] text-[14px]">Project not found</p>
+      <Link to="/app/dashboard" className="mt-2 text-[var(--primary)] text-[13px] hover:text-[var(--primary-hi)] hover:underline">Back to Dashboard</Link>
     </div>
   )
 
@@ -143,83 +143,86 @@ export function ProjectDetailPage() {
   }
 
   return (
-    <div className="px-4 py-5 md:px-6 md:py-8 max-w-[1280px] mx-auto">
+    <div className="px-4 py-5 md:px-6 md:py-8 max-w-[1440px] mx-auto animate-reveal-up">
       {/* Breadcrumb */}
-      <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-5 transition-colors">
-        <ArrowLeft size={15} /> Back to Projects
+      <button onClick={() => navigate(-1)} className="inline-flex items-center gap-1.5 text-[13px] text-[var(--ink-500)] hover:text-[var(--ink-900)] mb-5 transition-colors">
+        <ArrowLeft size={14} strokeWidth={1.8} /> Back to Projects
       </button>
 
       {/* Header */}
-      <div className="bg-white border border-gray-100 rounded-xl p-5 mb-5">
+      <div className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] p-5 md:p-6 mb-5 shadow-[var(--shadow-xs)]">
         <div className="flex items-start justify-between gap-3 mb-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-xl font-bold text-gray-900">{project.name}</h1>
-            <span className="font-mono text-xs bg-gray-100 text-gray-600 rounded px-2 py-0.5">{project.key}</span>
-            <PriorityBadge priority={project.priority} />
-            <StatusBadge status={project.status} />
-            {projectOverdue && (
-              <span className="flex items-center gap-1 text-xs font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
-                <AlertCircle size={11} /> Overdue
-              </span>
-            )}
+          <div className="flex-1 min-w-0">
+            <span className="eyebrow">— Project · {project.key}</span>
+            <div className="flex items-center gap-2 flex-wrap mt-1.5">
+              <h1 className="font-display text-[22px] md:text-[24px] font-semibold text-[var(--ink-900)] tracking-[-0.02em]">{project.name}</h1>
+              <PriorityBadge priority={project.priority} />
+              <StatusBadge status={project.status} />
+              {projectOverdue && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-700 bg-red-50 border border-red-200 ring-1 ring-inset ring-red-200 px-2 py-0.5 rounded-full dark:bg-red-950/40 dark:text-red-300 dark:border-red-900/60 dark:ring-red-900/60">
+                  <AlertCircle size={10} strokeWidth={2} /> Overdue
+                </span>
+              )}
+            </div>
           </div>
           {canEdit && (
             <div className="relative shrink-0">
               <button onClick={() => setMenuOpen(p => !p)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-                <MoreHorizontal size={18} />
+                className="p-1.5 text-[var(--ink-400)] hover:text-[var(--ink-900)] hover:bg-[var(--surface-2)] rounded-[var(--r-sm)] transition-colors"
+                aria-label="Project menu">
+                <MoreHorizontal size={16} strokeWidth={1.8} />
               </button>
               {menuOpen && (
-                <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-xl shadow-lg z-20 py-1 overflow-hidden">
+                <div className="absolute right-0 top-full mt-1 w-40 glass-strong border border-[var(--line-1)] rounded-[var(--r-md)] shadow-[var(--shadow-lg)] z-20 py-1 overflow-hidden">
                   <button onClick={() => { setShowEdit(true); setMenuOpen(false) }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Edit</button>
+                    className="w-full text-left px-3.5 py-2 text-[13px] text-[var(--ink-700)] hover:bg-[var(--surface-2)] transition-colors">Edit</button>
                   <button onClick={() => { setShowArchive(true); setMenuOpen(false) }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Archive</button>
-                  <div className="border-t border-gray-100 my-1" />
+                    className="w-full text-left px-3.5 py-2 text-[13px] text-[var(--ink-700)] hover:bg-[var(--surface-2)] transition-colors">Archive</button>
+                  <div className="border-t border-[var(--line-1)] my-1" />
                   <button onClick={() => { setShowDelete(true); setMenuOpen(false) }}
-                    className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50">Delete</button>
+                    className="w-full text-left px-3.5 py-2 text-[13px] text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors">Delete</button>
                 </div>
               )}
             </div>
           )}
         </div>
 
-        {project.client && <p className="text-sm text-gray-500 mb-3">{project.client}</p>}
+        {project.client && <p className="text-[13px] text-[var(--ink-500)] mb-3 mt-1">{project.client}</p>}
 
-        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 mb-4">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px] text-[var(--ink-500)] mb-5 mt-4">
           {project.due_date && (
-            <span className={`flex items-center gap-1.5 ${projectOverdue ? 'text-red-500 font-medium' : ''}`}>
-              <Calendar size={14} /> Due {formatDate(project.due_date)}
+            <span className={`inline-flex items-center gap-1.5 ${projectOverdue ? 'text-red-500 font-medium' : ''}`}>
+              <Calendar size={13} strokeWidth={1.8} /> <span className="font-mono tabular-nums">{formatDate(project.due_date)}</span>
             </span>
           )}
           {project.owner && (
-            <span className="flex items-center gap-1.5">
-              <User size={14} /> {project.owner.name}
+            <span className="inline-flex items-center gap-1.5">
+              <User size={13} strokeWidth={1.8} /> {project.owner.name}
             </span>
           )}
-          <span className="flex items-center gap-1.5">
-            <Building2 size={14} /> {project.department}
+          <span className="inline-flex items-center gap-1.5">
+            <Building2 size={13} strokeWidth={1.8} /> {project.department}
           </span>
           {project.reference_link && (
             <a href={project.reference_link} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-[#0A5540] hover:underline">
-              <ExternalLink size={14} /> Reference
+              className="inline-flex items-center gap-1.5 text-[var(--primary)] hover:text-[var(--primary-hi)] transition-colors">
+              <ExternalLink size={13} strokeWidth={1.8} /> Reference
             </a>
           )}
         </div>
 
         <div className="mb-2">
           <div className="flex justify-between mb-1.5">
-            <span className="text-xs text-gray-500">Progress</span>
-            <span className="text-xs font-semibold text-gray-600" style={{ fontFamily: 'DM Mono' }}>{project.progress}%</span>
+            <span className="eyebrow">Progress</span>
+            <span className="text-[11px] font-semibold font-mono tabular-nums text-[var(--ink-700)]">{project.progress}%</span>
           </div>
           <ProgressBar value={project.progress} size="lg" color={projectOverdue ? '#ef4444' : undefined} />
         </div>
 
-        <div className="flex gap-4 text-xs mt-2">
-          <span className="text-orange-500 font-medium">{todo} tasks todo</span>
-          <span className="text-blue-500 font-medium">{active} active</span>
-          <span className="text-green-500 font-medium">{done} done</span>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] mt-3 font-mono tabular-nums">
+          <span className="text-amber-600"><span className="font-semibold">{todo}</span> todo</span>
+          <span className="text-[var(--primary)]"><span className="font-semibold">{active}</span> active</span>
+          <span className="text-emerald-600"><span className="font-semibold">{done}</span> done</span>
         </div>
       </div>
 
@@ -234,45 +237,44 @@ export function ProjectDetailPage() {
       {tab === 'sop' && <ProjectSOP projectId={project.id} sop={project.sop} />}
       {tab === 'members' && <ProjectMembers projectId={project.id} department={project.department} />}
       {tab === 'issues' && (
-        <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <div className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] overflow-hidden shadow-[var(--shadow-xs)]">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--line-1)]">
             <div className="flex items-center gap-2">
-              <AlertCircle size={16} className="text-amber-500" />
-              <h2 className="text-base font-bold text-gray-900">Issues ({issues.length})</h2>
+              <AlertCircle size={15} strokeWidth={1.8} className="text-amber-500" />
+              <h2 className="font-display text-[15px] font-semibold text-[var(--ink-900)] tracking-[-0.01em]">Issues <span className="font-mono tabular-nums text-[var(--ink-500)]">({issues.length})</span></h2>
             </div>
             {isMember && (
               <button
                 onClick={() => setShowRaiseIssue(true)}
-                className="flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg hover:bg-amber-100 transition-colors"
+                className="inline-flex items-center gap-1.5 text-[12px] font-medium text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-[var(--r-sm)] hover:bg-amber-100 transition-colors"
               >
-                <Plus size={12} /> Raise Issue
+                <Plus size={12} strokeWidth={2} /> Raise Issue
               </button>
             )}
           </div>
           {issues.length === 0 ? (
-            <div className="py-12 text-center text-gray-400">
-              <AlertCircle size={36} className="mx-auto mb-3 opacity-20" />
-              <p className="text-sm">No issues raised for this project</p>
+            <div className="py-12 text-center text-[var(--ink-400)]">
+              <AlertCircle size={32} strokeWidth={1.4} className="mx-auto mb-3 opacity-30" />
+              <p className="text-[13px]">No issues raised for this project</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-[var(--line-1)]">
               {issues.map(issue => (
                 <button
                   key={issue.id}
                   onClick={() => setOpenIssue(issue)}
-                  className="w-full text-left flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50 transition-colors"
+                  className="w-full text-left flex items-center gap-3 px-5 py-3.5 hover:bg-[var(--surface-2)]/60 transition-colors"
                 >
-                  <span className={`w-2 h-2 rounded-full shrink-0 ${PRIORITY_DOT[issue.priority] || 'bg-gray-400'}`} />
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${PRIORITY_DOT[issue.priority] || 'bg-[var(--ink-400)]'}`} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{issue.title}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{issue.raised_by_name}</p>
+                    <p className="text-[13px] font-medium text-[var(--ink-900)] truncate">{issue.title}</p>
+                    <p className="text-[11px] text-[var(--ink-400)] mt-0.5">{issue.raised_by_name}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_STYLE[issue.status] || 'bg-gray-100 text-gray-600'}`}>
+                    <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${STATUS_STYLE[issue.status] || STATUS_STYLE.closed}`}>
                       {STATUS_LABEL[issue.status] || issue.status}
                     </span>
-                    <span className="text-xs text-gray-400">{timeAgo(issue.updated_at)}</span>
-                    <AlertCircle size={14} className="text-gray-300" />
+                    <span className="text-[11px] text-[var(--ink-400)] font-mono tabular-nums">{timeAgo(issue.updated_at)}</span>
                   </div>
                 </button>
               ))}
@@ -313,51 +315,52 @@ export function ProjectDetailPage() {
       />
 
       {tab === 'todos' && (
-        <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
-          <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
-            <ListTodo size={16} className="text-[#0A5540]" />
-            <h2 className="text-base font-bold text-gray-900">Linked Todos ({projectTodos.length})</h2>
+        <div className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] overflow-hidden shadow-[var(--shadow-xs)]">
+          <div className="flex items-center gap-2 px-5 py-4 border-b border-[var(--line-1)]">
+            <ListTodo size={15} strokeWidth={1.8} className="text-[var(--primary)]" />
+            <h2 className="font-display text-[15px] font-semibold text-[var(--ink-900)] tracking-[-0.01em]">Linked Todos <span className="font-mono tabular-nums text-[var(--ink-500)]">({projectTodos.length})</span></h2>
           </div>
           {projectTodos.length === 0 ? (
-            <div className="py-12 text-center text-gray-400">
-              <ListTodo size={36} className="mx-auto mb-3 opacity-20" />
-              <p className="text-sm">No todos linked to this project</p>
-              <p className="text-xs mt-1 text-gray-300">Link a personal todo to this project from the Todos page</p>
+            <div className="py-12 text-center text-[var(--ink-400)]">
+              <ListTodo size={32} strokeWidth={1.4} className="mx-auto mb-3 opacity-30" />
+              <p className="text-[13px]">No todos linked to this project</p>
+              <p className="text-[11px] mt-1 text-[var(--ink-400)]">Link a personal todo to this project from the Todos page</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-[var(--line-1)]">
               {projectTodos.map(todo => {
                 const overdue = todo.due_date && todo.status !== 'completed' && new Date(todo.due_date) < new Date()
                 return (
-                  <div key={todo.id} className="flex items-start gap-3 px-5 py-3.5 hover:bg-gray-50 transition-colors">
+                  <div key={todo.id} className="flex items-start gap-3 px-5 py-3.5 hover:bg-[var(--surface-2)]/60 transition-colors">
                     <button
                       onClick={() => toggleProjectTodo(todo)}
-                      className="mt-0.5 shrink-0 text-gray-400 hover:text-[#0A5540] transition-colors"
+                      className="mt-0.5 shrink-0 text-[var(--ink-400)] hover:text-[var(--primary)] transition-colors"
+                      aria-label={todo.status === 'completed' ? 'Mark pending' : 'Mark completed'}
                     >
                       {todo.status === 'completed'
-                        ? <CheckCircle2 size={18} className="text-[#0A5540]" />
-                        : <Circle size={18} />}
+                        ? <CheckCircle2 size={17} strokeWidth={1.8} className="text-[var(--primary)]" />
+                        : <Circle size={17} strokeWidth={1.8} />}
                     </button>
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium ${todo.status === 'completed' ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                      <p className={`text-[13px] font-medium ${todo.status === 'completed' ? 'line-through text-[var(--ink-400)]' : 'text-[var(--ink-900)]'}`}>
                         {todo.title}
                       </p>
                       {todo.description && (
-                        <p className="text-xs text-gray-400 mt-0.5 truncate">{todo.description}</p>
+                        <p className="text-[11px] text-[var(--ink-400)] mt-0.5 truncate">{todo.description}</p>
                       )}
                       <div className="flex items-center gap-3 mt-1">
                         {(todo as any).owner?.name && (
-                          <span className="text-xs text-gray-400">{(todo as any).owner.name}</span>
+                          <span className="text-[11px] text-[var(--ink-400)]">{(todo as any).owner.name}</span>
                         )}
                         {todo.due_date && (
-                          <span className={`flex items-center gap-1 text-xs ${overdue ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
-                            <Calendar size={11} /> {formatDate(todo.due_date)}
+                          <span className={`inline-flex items-center gap-1 text-[11px] font-mono tabular-nums ${overdue ? 'text-red-500 font-medium' : 'text-[var(--ink-400)]'}`}>
+                            <Calendar size={10} strokeWidth={1.8} /> {formatDate(todo.due_date)}
                           </span>
                         )}
                       </div>
                     </div>
-                    <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${
-                      todo.status === 'completed' ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'
+                    <span className={`shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full ring-1 ring-inset ${
+                      todo.status === 'completed' ? 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/60' : 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900/60'
                     }`}>
                       {todo.status === 'completed' ? 'Done' : 'Pending'}
                     </span>

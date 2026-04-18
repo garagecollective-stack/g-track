@@ -34,7 +34,7 @@ const STATUS_STYLE: Record<string, string> = {
   open: 'bg-red-100 text-red-700',
   in_review: 'bg-blue-100 text-blue-700',
   resolved: 'bg-green-100 text-green-700',
-  closed: 'bg-gray-100 text-gray-600',
+  closed: 'bg-[var(--surface-2)] text-[var(--ink-700)]',
 }
 
 interface StatCardProps {
@@ -52,17 +52,35 @@ function StatCard({ icon: Icon, value, label, sub, iconColor, iconBg, pulse, onC
   return (
     <div
       onClick={onClick}
-      className={`bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all ${onClick ? 'cursor-pointer hover:border-[#0A5540]/30' : ''}`}
+      className={`group relative bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] p-5 shadow-[var(--shadow-sm)] overflow-hidden transition-all duration-200 ${onClick ? 'cursor-pointer hover:-translate-y-0.5 hover:shadow-[var(--shadow-lg)] hover:border-[var(--primary-200)]' : ''}`}
     >
-      <div className={`w-10 h-10 ${iconBg} rounded-xl flex items-center justify-center mb-3 relative`}>
-        <Icon size={20} className={iconColor} />
-        {pulse && (
-          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
-        )}
+      {/* Subtle top gradient sheen */}
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--line-2)] to-transparent pointer-events-none" />
+
+      <div className="flex items-start justify-between mb-3">
+        <span className="text-[12px] font-medium text-[var(--ink-500)]">{label}</span>
+        <div className={`w-9 h-9 ${iconBg} rounded-[var(--r-sm)] flex items-center justify-center relative transition-transform duration-200 group-hover:scale-105`}>
+          <Icon size={17} strokeWidth={2} className={iconColor} />
+          {pulse && (
+            <>
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[var(--danger)] animate-soft-pulse" />
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[var(--danger)]/50 animate-ping" />
+            </>
+          )}
+        </div>
       </div>
-      <p className="text-3xl font-black text-gray-900" style={{ fontFamily: 'DM Mono, monospace' }}>{value}</p>
-      <p className="text-sm font-semibold text-gray-700 mt-0.5">{label}</p>
-      {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+
+      <p className="font-display text-[32px] leading-[1.1] tabular-nums font-semibold text-[var(--ink-900)] tracking-[-0.02em]">{value}</p>
+
+      {sub && (
+        <p className="mt-1 text-[12px] text-[var(--ink-500)]">{sub}</p>
+      )}
+
+      {onClick && (
+        <span className="absolute top-5 right-[56px] opacity-0 translate-x-[-4px] group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 text-[var(--primary)] text-xs font-mono pointer-events-none">
+          ↗
+        </span>
+      )}
     </div>
   )
 }
@@ -133,7 +151,9 @@ export function DirectorDashboard() {
             .limit(10)
         }
 
-        if (result.data) setTeamLeadTodos(result.data as any)
+        if (result.data) {
+          setTeamLeadTodos(result.data as (TodoItem & { owner?: { id: string; name: string; department: string | null } | null })[])
+        }
       } catch {
         // ignore
       }
@@ -152,6 +172,19 @@ export function DirectorDashboard() {
   const doneTasks    = tasks.filter(t => t.status === 'done').length
   const overdueTasks = tasks.filter(t => (t.is_overdue || isOverdue(t.due_date)) && t.status !== 'done').length
 
+  const projectTaskCounts = useMemo(() => {
+    const map = new Map<string, { todo: number; active: number; done: number }>()
+    for (const t of tasks) {
+      if (!t.project_id) continue
+      const c = map.get(t.project_id) || { todo: 0, active: 0, done: 0 }
+      if (t.status === 'backlog' || t.status === 'onHold') c.todo++
+      else if (t.status === 'inProgress') c.active++
+      else if (t.status === 'done') c.done++
+      map.set(t.project_id, c)
+    }
+    return map
+  }, [tasks])
+
   // Department health
   const deptHealth = depts.map(dept => {
     const dp = projects.filter(p => p.department === dept)
@@ -163,21 +196,28 @@ export function DirectorDashboard() {
   const recentIssues = issues.filter(i => i.status === 'open' || i.status === 'in_review').slice(0, 3)
 
   return (
-    <div className="px-4 py-5 md:px-6 md:py-8 max-w-[1280px] mx-auto">
+    <div className="px-4 py-6 md:px-8 md:py-8 max-w-[1440px] mx-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl md:text-3xl font-black text-gray-900" style={{ letterSpacing: '-0.5px' }}>Company Overview</h1>
-          <p className="text-sm text-gray-500 mt-1">Monitor all projects and teams across Garage Collective</p>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[11px] font-medium tracking-[0.06em] uppercase text-[var(--primary)] bg-[var(--primary-50)] border border-[var(--primary-200)] rounded-[var(--r-xs)] px-2 py-0.5">Director</span>
+            <span className="text-[12px] text-[var(--ink-400)]">·</span>
+            <span className="text-[12px] text-[var(--ink-500)]">Company overview</span>
+          </div>
+          <h1 className="font-display text-[24px] md:text-[32px] leading-[1.15] font-semibold text-[var(--ink-900)] tracking-[-0.02em]">
+            Company overview
+          </h1>
+          <p className="text-[14px] text-[var(--ink-500)] mt-1">
+            Monitor all projects and teams across Garage Collective.
+          </p>
         </div>
         <div className="flex gap-2 shrink-0">
-          <button onClick={() => openAssignTask()}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-[#0A5540] bg-[#edf8f4] border border-[#0A5540]/20 rounded-lg hover:bg-[#d6f0e8] transition-colors">
-            <CheckSquare size={14} /> Assign Task
+          <button onClick={() => openAssignTask()} className="btn-secondary">
+            <CheckSquare size={14} strokeWidth={2} /> Assign Task
           </button>
-          <button onClick={() => openNewProject()}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-[#0A5540] rounded-lg hover:bg-[#0d6b51] transition-colors shadow-sm">
-            <Plus size={15} /> New Project
+          <button onClick={() => openNewProject()} className="btn-primary">
+            <Plus size={15} strokeWidth={2.2} /> New Project
           </button>
         </div>
       </div>
@@ -186,7 +226,7 @@ export function DirectorDashboard() {
       <OverdueAlertBanner />
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-5 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 stagger">
         <StatCard icon={Folder}        value={projects.length} label="Total Projects"  sub={`${projects.filter(p=>p.status==='inProgress').length} active`}   iconColor="text-indigo-600" iconBg="bg-indigo-50"  onClick={() => setStatModal({ open: true, type: 'projects', title: 'All Projects' })} />
         <StatCard icon={CheckSquare}   value={tasks.length}    label="Total Tasks"     sub={`${activeTasks} in progress`}                                       iconColor="text-blue-600"   iconBg="bg-blue-50"   onClick={() => setStatModal({ open: true, type: 'tasks', title: 'All Tasks' })} />
         <StatCard
@@ -194,28 +234,35 @@ export function DirectorDashboard() {
           value={overdueTasks}
           label="Overdue"
           sub="Need immediate action"
-          iconColor={overdueTasks > 0 ? 'text-red-600' : 'text-gray-400'}
-          iconBg={overdueTasks > 0 ? 'bg-red-50' : 'bg-gray-50'}
+          iconColor={overdueTasks > 0 ? 'text-red-600' : 'text-[var(--ink-400)]'}
+          iconBg={overdueTasks > 0 ? 'bg-red-50' : 'bg-[var(--surface-2)]'}
           pulse={overdueTasks > 0}
           onClick={() => setStatModal({ open: true, type: 'overdue', title: 'Overdue Items' })}
         />
-        <StatCard icon={CheckCheck}    value={doneTasks}       label="Done"            sub={`${members.length} team members`}                                   iconColor="text-[#0A5540]"  iconBg="bg-[#edf8f4]" onClick={() => setStatModal({ open: true, type: 'completed', title: 'Completed Tasks' })} />
+        <StatCard icon={CheckCheck}    value={doneTasks}       label="Done"            sub={`${members.length} team members`}                                   iconColor="text-[var(--primary)]"  iconBg="bg-[var(--primary-50)]" onClick={() => setStatModal({ open: true, type: 'completed', title: 'Completed Tasks' })} />
       </div>
 
       {/* Department Health */}
       {deptHealth.length > 0 && (
-        <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp size={16} className="text-[#0A5540]" />
-            <h2 className="text-base font-bold text-gray-900">Department Health</h2>
+        <div className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] shadow-[var(--shadow-sm)] p-5 md:p-6 mb-6">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2">
+              <TrendingUp size={16} strokeWidth={2} className="text-[var(--primary)]" />
+              <h2 className="text-[14px] font-semibold text-[var(--ink-900)]">Department health</h2>
+            </div>
+            <span className="font-mono text-[11px] tabular-nums text-[var(--ink-400)]">
+              {deptHealth.length} active
+            </span>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
             {deptHealth.map(({ dept, projects: pCount, progress, members: mCount }) => (
-              <div key={dept} className="p-3 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors text-center">
-                <p className="text-[11px] font-bold text-gray-600 mb-1 truncate">{dept}</p>
-                <p className="text-2xl font-black text-gray-900" style={{ fontFamily: 'DM Mono' }}>{progress}%</p>
-                <ProgressBar value={progress} size="sm" className="mt-1 mb-2" />
-                <div className="flex justify-between text-[10px] text-gray-400">
+              <div key={dept} className="group p-4 rounded-[var(--r-md)] border border-[var(--line-1)] bg-[var(--surface-1)] hover:border-[var(--primary-200)] hover:shadow-[var(--shadow-sm)] transition-all duration-200">
+                <p className="text-[11px] font-medium text-[var(--ink-500)] uppercase tracking-[0.04em] truncate mb-2">{dept}</p>
+                <p className="font-display text-[24px] leading-[1.1] font-semibold tabular-nums text-[var(--ink-900)]">
+                  {progress}<span className="text-[var(--ink-400)] text-[16px] font-normal">%</span>
+                </p>
+                <ProgressBar value={progress} size="sm" className="mt-2 mb-2" />
+                <div className="flex justify-between text-[11px] tabular-nums text-[var(--ink-500)]">
                   <span>{pCount} proj</span>
                   <span>{mCount} people</span>
                 </div>
@@ -229,12 +276,12 @@ export function DirectorDashboard() {
       <div className="flex flex-col lg:flex-row gap-5">
         {/* Left: Projects */}
         <div className="flex-1 min-w-0">
-          <div className="bg-white border border-gray-100 rounded-2xl shadow-sm">
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 flex-wrap">
-              <h2 className="text-base font-bold text-gray-900">All Projects</h2>
+          <div className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-2xl shadow-sm">
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--line-1)] flex-wrap">
+              <h2 className="text-base font-bold text-[var(--ink-900)]">All Projects</h2>
               <div className="ml-auto flex items-center gap-2 flex-wrap">
                 <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-                  className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:border-[#0A5540]">
+                  className="text-xs border border-[var(--line-1)] rounded-[var(--r-sm)] px-2.5 py-1.5 bg-[var(--surface-1)] text-[var(--ink-700)] focus:outline-none focus:border-[var(--primary)]">
                   <option value="all">All Status</option>
                   <option value="backlog">Backlog</option>
                   <option value="inProgress">In Progress</option>
@@ -242,7 +289,7 @@ export function DirectorDashboard() {
                   <option value="onHold">On Hold</option>
                 </select>
                 <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)}
-                  className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:border-[#0A5540]">
+                  className="text-xs border border-[var(--line-1)] rounded-[var(--r-sm)] px-2.5 py-1.5 bg-[var(--surface-1)] text-[var(--ink-700)] focus:outline-none focus:border-[var(--primary)]">
                   <option value="all">All Departments</option>
                   {depts.map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
@@ -252,25 +299,25 @@ export function DirectorDashboard() {
               {projLoading ? (
                 <div className="space-y-3"><SkeletonCard count={4} /></div>
               ) : filtered.length === 0 ? (
-                <div className="text-center py-12 text-gray-400">
+                <div className="text-center py-12 text-[var(--ink-400)]">
                   <Folder size={40} className="mx-auto mb-3 opacity-30" />
                   <p className="text-sm font-medium">No projects match filters</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
                   {filtered.map(project => {
-                    const tc = project.task_counts || { todo: 0, active: 0, done: 0 }
+                    const tc = projectTaskCounts.get(project.id) || project.task_counts || { todo: 0, active: 0, done: 0 }
                     const overdue = project.is_overdue || (project.due_date && isOverdue(project.due_date))
                     return (
                       <div key={project.id}
                         onClick={() => navigate(`/app/projects/${project.id}`)}
-                        className="border border-gray-100 rounded-xl p-4 hover:border-[#0A5540]/40 hover:shadow-md transition-all cursor-pointer group">
+                        className="border border-[var(--line-1)] rounded-[var(--r-lg)] p-4 hover:border-[var(--primary)]/40 hover:shadow-md transition-all cursor-pointer group">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1 min-w-0 mr-2">
-                            <h3 className="text-sm font-bold text-gray-900 group-hover:text-[#0A5540] transition-colors truncate">
+                            <h3 className="text-sm font-bold text-[var(--ink-900)] group-hover:text-[var(--primary)] transition-colors truncate">
                               {project.name}
                             </h3>
-                            {project.client && <p className="text-xs text-gray-400 mt-0.5">{project.client}</p>}
+                            {project.client && <p className="text-xs text-[var(--ink-400)] mt-0.5">{project.client}</p>}
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
                             {overdue && (
@@ -287,8 +334,8 @@ export function DirectorDashboard() {
                         </div>
                         <div className="mb-3">
                           <div className="flex justify-between text-xs mb-1.5">
-                            <span className="text-gray-400">Progress</span>
-                            <span className="font-bold text-gray-700" style={{ fontFamily: 'DM Mono' }}>{project.progress}%</span>
+                            <span className="text-[var(--ink-400)]">Progress</span>
+                            <span className="font-bold text-[var(--ink-700)]" style={{ fontFamily: 'IBM Plex Mono' }}>{project.progress}%</span>
                           </div>
                           <ProgressBar value={project.progress} color={overdue ? '#ef4444' : undefined} />
                         </div>
@@ -299,7 +346,7 @@ export function DirectorDashboard() {
                             <span className="text-green-500">{tc.done} done</span>
                           </div>
                           {project.due_date && (
-                            <span className={`flex items-center gap-1 text-[11px] ${overdue ? 'text-red-500 font-semibold' : 'text-gray-400'}`}>
+                            <span className={`flex items-center gap-1 text-[11px] ${overdue ? 'text-red-500 font-semibold' : 'text-[var(--ink-400)]'}`}>
                               <Calendar size={11} />{formatDateShort(project.due_date)}
                             </span>
                           )}
@@ -314,32 +361,32 @@ export function DirectorDashboard() {
         </div>
 
         {/* Right sidebar */}
-        <div className="lg:w-72 xl:w-80 shrink-0 space-y-4">
+        <div className="lg:w-72 xl:w-80 2xl:w-96 shrink-0 space-y-4">
           {/* Todo Widget */}
           <TodoWidget />
 
           {/* Feature 4: Team Lead To-Dos */}
           {teamLeadTodos.length > 0 && (
-            <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                <h3 className="text-sm font-semibold text-gray-900">Team Lead To-Dos</h3>
-                <span className="text-xs text-gray-400">{teamLeadTodos.length} pending</span>
+            <div className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--line-1)]">
+                <h3 className="text-sm font-semibold text-[var(--ink-900)]">Team Lead To-Dos</h3>
+                <span className="text-xs text-[var(--ink-400)]">{teamLeadTodos.length} pending</span>
               </div>
-              <div className="divide-y divide-gray-50">
+              <div className="divide-y divide-[var(--line-1)]">
                 {teamLeadTodos.slice(0, 8).map(todo => (
-                  <div key={todo.id} className="px-4 py-2.5 hover:bg-gray-50 transition-colors">
+                  <div key={todo.id} className="px-4 py-2.5 hover:bg-[var(--surface-2)] transition-colors">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="w-2 h-2 rounded-full border border-gray-400 shrink-0" />
-                      <p className="text-xs font-medium text-gray-800 truncate">{todo.title}</p>
+                      <span className="w-2 h-2 rounded-full border border-[var(--line-2)] shrink-0" />
+                      <p className="text-xs font-medium text-[var(--ink-900)] truncate">{todo.title}</p>
                     </div>
                     {(todo as any).owner && (
-                      <p className="text-[10px] text-gray-400 ml-4">{(todo as any).owner.name} · {(todo as any).owner.department}</p>
+                      <p className="text-[10px] text-[var(--ink-400)] ml-4">{(todo as any).owner.name} · {(todo as any).owner.department}</p>
                     )}
                     {todo.notes && (
-                      <p className="text-[10px] text-gray-500 ml-4 mt-0.5 line-clamp-1 italic">{todo.notes}</p>
+                      <p className="text-[10px] text-[var(--ink-500)] ml-4 mt-0.5 line-clamp-1 italic">{todo.notes}</p>
                     )}
                     {todo.project_name && (
-                      <p className="text-[10px] text-[#0A5540] ml-4 mt-0.5">📁 {todo.project_name}</p>
+                      <p className="text-[10px] text-[var(--primary)] ml-4 mt-0.5">📁 {todo.project_name}</p>
                     )}
                   </div>
                 ))}
@@ -348,48 +395,48 @@ export function DirectorDashboard() {
           )}
 
           {/* Team Members */}
-          <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
-              <Users size={14} className="text-gray-400" />
-              <h3 className="text-sm font-semibold text-gray-900">Team</h3>
-              <span className="ml-auto text-xs text-gray-400">{members.length} members</span>
+          <div className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--line-1)]">
+              <Users size={14} className="text-[var(--ink-400)]" />
+              <h3 className="text-sm font-semibold text-[var(--ink-900)]">Team</h3>
+              <span className="ml-auto text-xs text-[var(--ink-400)]">{members.length} members</span>
             </div>
-            <div className="divide-y divide-gray-50 max-h-64 overflow-y-auto">
+            <div className="divide-y divide-[var(--line-1)] max-h-64 overflow-y-auto">
               {members.slice(0, 8).map(m => {
                 const mActive = tasks.filter(t => t.assignee_id === m.id && t.status === 'inProgress').length
                 return (
-                  <div key={m.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors">
+                  <div key={m.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--surface-2)] transition-colors">
                     <Avatar name={m.name} size="sm" status={m.user_status} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{m.name}</p>
-                      <p className="text-xs text-gray-400">{m.department} · {mActive} active</p>
+                      <p className="text-sm font-medium text-[var(--ink-900)] truncate">{m.name}</p>
+                      <p className="text-xs text-[var(--ink-400)]">{m.department} · {mActive} active</p>
                     </div>
                   </div>
                 )
               })}
-              {members.length === 0 && <p className="px-4 py-4 text-sm text-gray-400 text-center">No members</p>}
+              {members.length === 0 && <p className="px-4 py-4 text-sm text-[var(--ink-400)] text-center">No members</p>}
             </div>
           </div>
 
           {/* Recent Tasks */}
-          <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100">
-              <h3 className="text-sm font-semibold text-gray-900">Recent Tasks</h3>
+          <div className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] overflow-hidden">
+            <div className="px-4 py-3 border-b border-[var(--line-1)]">
+              <h3 className="text-sm font-semibold text-[var(--ink-900)]">Recent Tasks</h3>
             </div>
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y divide-[var(--line-1)]">
               {taskLoading ? (
                 <div className="p-4"><SkeletonCard count={3} /></div>
               ) : tasks.slice(0, 6).map(task => {
                 const taskOverdue = task.is_overdue || (isOverdue(task.due_date) && task.status !== 'done')
                 return (
-                  <div key={task.id} className={`px-4 py-2.5 hover:bg-gray-50 transition-colors ${taskOverdue ? 'bg-red-50/40' : ''}`}>
+                  <div key={task.id} className={`px-4 py-2.5 hover:bg-[var(--surface-2)] transition-colors ${taskOverdue ? 'bg-red-50/40' : ''}`}>
                     <div className="flex items-start gap-1.5">
                       {taskOverdue && <AlertTriangle size={12} className="text-red-500 mt-0.5 shrink-0" />}
-                      <p className="text-sm font-medium text-gray-900 truncate">{task.title}</p>
+                      <p className="text-sm font-medium text-[var(--ink-900)] truncate">{task.title}</p>
                     </div>
                     {/* Fix #6: show assignee + "by [creator]" + due date */}
                     <div className="flex items-center justify-between mt-1">
-                      <span className={`text-xs ${taskOverdue ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+                      <span className={`text-xs ${taskOverdue ? 'text-red-500 font-medium' : 'text-[var(--ink-400)]'}`}>
                         {task.assignee_name || 'Unassigned'}
                         {task.created_by_name && task.created_by_name !== task.assignee_name
                           ? ` · by ${task.created_by_name}` : ''}
@@ -401,36 +448,36 @@ export function DirectorDashboard() {
                 )
               })}
               {!taskLoading && tasks.length === 0 && (
-                <p className="px-4 py-6 text-sm text-gray-400 text-center">No tasks yet</p>
+                <p className="px-4 py-6 text-sm text-[var(--ink-400)] text-center">No tasks yet</p>
               )}
             </div>
           </div>
 
           {/* Recent Issues */}
           {recentIssues.length > 0 && (
-            <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+            <div className="bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-lg)] overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--line-1)]">
                 <div className="flex items-center gap-1.5">
                   <AlertCircle size={14} className="text-red-500" />
-                  <h3 className="text-sm font-semibold text-gray-900">Recent Issues</h3>
+                  <h3 className="text-sm font-semibold text-[var(--ink-900)]">Recent Issues</h3>
                 </div>
                 <button onClick={() => navigate('/app/issues')}
-                  className="text-xs text-[#0A5540] hover:underline font-medium">All →</button>
+                  className="text-xs text-[var(--primary)] hover:underline font-medium">All →</button>
               </div>
-              <div className="divide-y divide-gray-50">
+              <div className="divide-y divide-[var(--line-1)]">
                 {recentIssues.map(issue => (
                   <button
                     key={issue.id}
                     onClick={() => setOpenIssue(issue)}
-                    className="w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors"
+                    className="w-full text-left px-4 py-2.5 hover:bg-[var(--surface-2)] transition-colors"
                   >
                     <div className="flex items-start gap-2">
                       <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${PRIORITY_DOT[issue.priority] || 'bg-gray-400'}`} />
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-gray-900 truncate">{issue.title}</p>
+                        <p className="text-xs font-semibold text-[var(--ink-900)] truncate">{issue.title}</p>
                         <div className="flex items-center justify-between mt-0.5">
-                          <span className="text-[10px] text-gray-400">{issue.raised_by_name}</span>
-                          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${STATUS_STYLE[issue.status] || 'bg-gray-100 text-gray-600'}`}>
+                          <span className="text-[10px] text-[var(--ink-400)]">{issue.raised_by_name}</span>
+                          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${STATUS_STYLE[issue.status] || 'bg-[var(--surface-2)] text-[var(--ink-700)]'}`}>
                             {issue.status === 'in_review' ? 'In Review' : issue.status.charAt(0).toUpperCase() + issue.status.slice(1)}
                           </span>
                         </div>

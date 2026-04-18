@@ -60,7 +60,7 @@ export function getStatusColor(s: TaskStatus | ProjectStatus): string {
   switch (s) {
     case 'backlog': return '#6b7280'
     case 'inProgress': return '#3b82f6'
-    case 'done': return '#22c55e'
+    case 'done': return '#16a273'
     case 'completed': return '#0A5540'
     case 'onHold': return '#eab308'
   }
@@ -91,9 +91,13 @@ export function isOverdue(dueDate: string | null | undefined): boolean {
 export function friendlyError(error: unknown): string {
   const msg = error instanceof Error ? error.message : String(error)
   if (msg.includes('Invalid login credentials')) return 'Incorrect email or password'
+  if (msg.includes('Email not confirmed')) return 'Verify your email before signing in'
   if (msg.includes('Email already registered') || msg.includes('already been registered')) return 'An account with this email already exists'
   if (msg.includes('duplicate key value')) return 'A record with this value already exists'
   if (msg.includes('check constraint')) return 'Invalid value provided'
+  if (msg.includes('Too many attempts')) return msg
+  if (msg.includes('For security purposes, you can only request this after')) return 'Too many reset requests. Wait before trying again.'
+  if (msg.includes('over_email_send_rate_limit') || msg.includes('over_request_rate_limit')) return 'Too many authentication requests. Please try again later.'
   if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('network')) return 'Connection lost. Please check your internet connection.'
   return 'Something went wrong. Please try again.'
 }

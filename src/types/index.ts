@@ -22,6 +22,10 @@ export interface Profile {
   invited_by: string | null
   created_at: string
   theme?: 'light' | 'dark'
+  status_text?: string | null
+  status_emoji?: string | null
+  status_expires_at?: string | null
+  dnd_until?: string | null
 }
 
 export interface Department {

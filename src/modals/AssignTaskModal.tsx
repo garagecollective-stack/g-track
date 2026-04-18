@@ -146,8 +146,8 @@ export function AssignTaskModal({ open, onClose, projectId, defaultAssigneeId }:
     }
   }
 
-  const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-[9px] text-sm text-gray-900 placeholder-gray-400 bg-white focus:outline-none focus:border-[#0A5540] focus:ring-2 focus:ring-[#0A5540]/10"
-  const labelCls = "text-sm font-medium text-gray-700 block mb-1.5"
+  const inputCls = "w-full border border-[var(--line-1)] rounded-[var(--r-sm)] px-3 py-[9px] text-sm text-[var(--ink-900)] placeholder-[var(--ink-400)] bg-[var(--surface-1)] focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15"
+  const labelCls = "text-sm font-medium text-[var(--ink-700)] block mb-1.5"
 
   const filteredAssignees = assigneeSearch
     ? assignees.filter(a => a.name.toLowerCase().includes(assigneeSearch.toLowerCase()))
@@ -161,7 +161,7 @@ export function AssignTaskModal({ open, onClose, projectId, defaultAssigneeId }:
   return (
     <>
       <Modal open={open} onClose={onClose} title="Assign Task">
-        <div style={{ colorScheme: 'light' }} className="bg-white text-gray-900">
+        <div style={{ colorScheme: 'light' }} className="bg-[var(--surface-1)] text-[var(--ink-900)]">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className={labelCls}>Title <span className="text-red-500">*</span></label>
@@ -179,7 +179,7 @@ export function AssignTaskModal({ open, onClose, projectId, defaultAssigneeId }:
                 {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className={labelCls}>Priority</label>
                 <select value={form.priority} onChange={e => set('priority', e.target.value)} className={inputCls}>
@@ -205,35 +205,35 @@ export function AssignTaskModal({ open, onClose, projectId, defaultAssigneeId }:
               <label className={labelCls}>
                 Assign To
                 {selectedAssignees.length > 0 && (
-                  <span className="ml-2 text-xs font-normal text-[#0A5540]">
+                  <span className="ml-2 text-xs font-normal text-[var(--primary)]">
                     {selectedAssignees.length} selected
                   </span>
                 )}
               </label>
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <div className="px-3 py-2 border-b border-gray-100 bg-gray-50">
+              <div className="border border-[var(--line-1)] rounded-[var(--r-sm)] overflow-hidden">
+                <div className="px-3 py-2 border-b border-[var(--line-1)] bg-[var(--surface-2)]">
                   <input
                     type="text"
                     value={assigneeSearch}
                     onChange={e => setAssigneeSearch(e.target.value)}
                     placeholder="🔍 Search members..."
-                    className="w-full text-sm text-gray-900 placeholder-gray-400 bg-transparent focus:outline-none"
+                    className="w-full text-sm text-[var(--ink-900)] placeholder-[var(--ink-400)] bg-transparent focus:outline-none"
                   />
                 </div>
-                <div className="max-h-48 overflow-y-auto divide-y divide-gray-50">
+                <div className="max-h-48 overflow-y-auto divide-y divide-[var(--line-1)]">
                   {filteredAssignees.map(a => (
                     <button
                       key={a.id}
                       type="button"
                       onClick={() => toggleAssignee(a.id)}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 transition-colors text-left ${
-                        selectedAssignees.includes(a.id) ? 'bg-[#edf8f4]' : ''
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 hover:bg-[var(--surface-2)] transition-colors text-left ${
+                        selectedAssignees.includes(a.id) ? 'bg-[var(--primary-50)]' : ''
                       }`}
                     >
                       <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
                         selectedAssignees.includes(a.id)
-                          ? 'bg-[#0A5540] border-[#0A5540]'
-                          : 'border-gray-300'
+                          ? 'bg-[var(--primary)] border-[var(--primary)]'
+                          : 'border-[var(--line-2)]'
                       }`}>
                         {selectedAssignees.includes(a.id) && (
                           <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 10 10" fill="none">
@@ -241,21 +241,21 @@ export function AssignTaskModal({ open, onClose, projectId, defaultAssigneeId }:
                           </svg>
                         )}
                       </div>
-                      <span className="flex-1 text-sm text-gray-900">{a.name}</span>
-                      <span className="text-xs text-gray-400">{a.department}</span>
+                      <span className="flex-1 text-sm text-[var(--ink-900)]">{a.name}</span>
+                      <span className="text-xs text-[var(--ink-400)]">{a.department}</span>
                       {a.role === 'teamLead' && (
-                        <span className="text-[10px] bg-[#0A5540]/10 text-[#0A5540] rounded-full px-1.5 py-0.5 font-medium">Lead</span>
+                        <span className="text-[10px] bg-[var(--primary)]/10 text-[var(--primary)] rounded-full px-1.5 py-0.5 font-medium">Lead</span>
                       )}
                     </button>
                   ))}
                   {filteredAssignees.length === 0 && (
-                    <p className="px-3 py-4 text-sm text-gray-400 text-center">No members found</p>
+                    <p className="px-3 py-4 text-sm text-[var(--ink-400)] text-center">No members found</p>
                   )}
                 </div>
                 {selectedAssignees.length > 0 && (
-                  <div className="px-3 py-2 border-t border-gray-100 bg-gray-50">
-                    <p className="text-xs text-gray-500">
-                      Selected: <span className="text-gray-700 font-medium">{selectedNames}</span>
+                  <div className="px-3 py-2 border-t border-[var(--line-1)] bg-[var(--surface-2)]">
+                    <p className="text-xs text-[var(--ink-500)]">
+                      Selected: <span className="text-[var(--ink-700)] font-medium">{selectedNames}</span>
                     </p>
                   </div>
                 )}
@@ -268,11 +268,11 @@ export function AssignTaskModal({ open, onClose, projectId, defaultAssigneeId }:
             </div>
             <div className="flex justify-end gap-3 pt-2">
               <button type="button" onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                className="px-4 py-2 text-sm font-medium text-[var(--ink-700)] bg-[var(--surface-1)] border border-[var(--line-1)] rounded-[var(--r-sm)] hover:bg-[var(--surface-2)] transition-colors">
                 Cancel
               </button>
               <button type="submit" disabled={loading}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0A5540] rounded-lg hover:bg-[#0d6b51] transition-colors disabled:opacity-70 disabled:pointer-events-none">
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[var(--primary)] rounded-[var(--r-sm)] hover:bg-[var(--primary-700)] transition-colors disabled:opacity-70 disabled:pointer-events-none">
                 {loading && <LoadingSpinner size="sm" color="white" />}
                 Assign Task
               </button>

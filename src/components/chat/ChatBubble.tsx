@@ -12,11 +12,11 @@ export function ChatBubble() {
     <button
       onClick={() => openChat()}
       aria-label="Open chat"
-      className="fixed bottom-[88px] md:bottom-6 right-4 md:right-6 z-30 w-12 h-12 bg-[#0A5540] dark:bg-[#22C55E] text-white dark:text-black rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform duration-150"
+      className="fixed right-4 md:right-6 z-30 w-12 h-12 bg-[var(--primary)] dark:bg-[#16a273] text-white dark:text-black rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform duration-150 chat-fab"
     >
       {/* Pulsing outer ring when there are unread messages */}
       {totalUnread > 0 && (
-        <span className="absolute inset-0 rounded-full bg-[#0A5540] dark:bg-[#22C55E] animate-ping opacity-40" />
+        <span className="absolute inset-0 rounded-full bg-[var(--primary)] dark:bg-[#16a273] animate-ping opacity-40" />
       )}
       <MessageCircle size={20} />
       {totalUnread > 0 && (
