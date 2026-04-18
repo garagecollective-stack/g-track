@@ -118,7 +118,7 @@ export function WorkloadDashboard() {
     : 'Your current task breakdown by status'
 
   return (
-    <div className="px-4 py-5 md:px-6 md:py-8 max-w-[1440px] mx-auto">
+    <div className="px-4 py-4 md:px-6 md:py-5 xl:py-6 max-w-[1440px] mx-auto">
       {/* Header */}
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>

@@ -30,22 +30,29 @@ export function useProjects() {
     }
 
     if (files && files.length > 0) {
+      const failed: string[] = []
       for (const file of files) {
         const path = `${inserted.id}/${Date.now()}-${file.name}`
         const { data: uploadData, error: uploadErr } = await supabase.storage
           .from('project-files')
           .upload(path, file)
-        if (!uploadErr && uploadData) {
-          const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(path)
-          await supabase.from('project_files').insert({
-            project_id: inserted.id,
-            file_name: file.name,
-            file_url: urlData.publicUrl,
-            file_size: file.size,
-            file_type: file.type,
-            uploaded_by: currentUser?.id,
-          })
+        if (uploadErr || !uploadData) {
+          failed.push(file.name)
+          continue
         }
+        const { data: urlData } = supabase.storage.from('project-files').getPublicUrl(path)
+        const { error: insertErr } = await supabase.from('project_files').insert({
+          project_id: inserted.id,
+          file_name: file.name,
+          file_url: urlData.publicUrl,
+          file_size: file.size,
+          file_type: file.type,
+          uploaded_by: currentUser?.id,
+        })
+        if (insertErr) failed.push(file.name)
+      }
+      if (failed.length > 0) {
+        throw new Error(`Project created, but these files failed to upload: ${failed.join(', ')}`)
       }
     }
 

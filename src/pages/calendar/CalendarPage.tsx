@@ -73,7 +73,7 @@ export function CalendarPage() {
   for (let d = 1; d <= daysInMonth; d++) cells.push(d)
 
   return (
-    <div className="px-4 py-5 md:px-6 md:py-8 max-w-[1440px] mx-auto">
+    <div className="px-4 py-4 md:px-6 md:py-5 xl:py-6 max-w-[1440px] mx-auto">
       <div className="mb-5">
         <h1 className="text-2xl font-bold text-[var(--ink-900)]" style={{ letterSpacing: '-0.5px' }}>Calendar</h1>
         <p className="text-sm text-[var(--ink-500)] mt-1">Deadlines and due dates at a glance</p>

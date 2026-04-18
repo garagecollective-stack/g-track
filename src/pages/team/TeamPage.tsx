@@ -42,7 +42,7 @@ export function TeamPage() {
   const title = isDirector ? 'Garage Collective' : `Your ${currentUser?.department} Team`
 
   return (
-    <div className="px-4 py-5 md:px-6 md:py-8 max-w-[1440px] mx-auto">
+    <div className="px-4 py-4 md:px-6 md:py-5 xl:py-6 max-w-[1440px] mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-[var(--ink-900)]" style={{ letterSpacing: '-0.5px' }}>Team</h1>
         <p className="text-sm text-[var(--ink-500)] mt-1">{title}</p>

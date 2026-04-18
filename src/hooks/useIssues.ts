@@ -46,6 +46,9 @@ export function useIssues(entityId?: string) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
+  // Ref lets the realtime handler see fresh role/dept without resubscribing
+  const userRef = useRef(currentUser)
+  userRef.current = currentUser
 
   const fetchIssues = useCallback(async () => {
     if (!currentUser) return
@@ -80,11 +83,12 @@ export function useIssues(entityId?: string) {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'issues' }, (payload) => {
         // Apply the same role-based visibility filter client-side to avoid a DB round-trip
         const issue = payload.new as Issue
-        if (currentUser?.role === 'member') {
-          const dept = currentUser.department || ''
-          if (issue.raised_by !== currentUser.id && issue.department !== dept) return
-        } else if (currentUser?.role === 'teamLead') {
-          if (issue.department !== currentUser.department) return
+        const u = userRef.current
+        if (u?.role === 'member') {
+          const dept = u.department || ''
+          if (issue.raised_by !== u.id && issue.department !== dept) return
+        } else if (u?.role === 'teamLead') {
+          if (issue.department !== u.department) return
         }
         if (entityId && issue.entity_id !== entityId) return
         setIssues(prev => prev.find(i => i.id === issue.id) ? prev : [issue, ...prev])
@@ -114,58 +118,8 @@ export function useIssues(entityId?: string) {
       .single()
     if (err) throw err
 
-    // --- Notify team leads and directors in this department (Fix #2 & #9) ---
-    const dept = currentUser.department || ''
-    const { data: leads } = await supabase
-      .from('profiles')
-      .select('id, role')
-      .in('role', ['teamLead', 'director', 'super_admin'])
-      .eq('is_active', true)
-
-    for (const lead of leads || []) {
-      // Skip self-notification and only notify dept leads (or all directors)
-      if (lead.id === currentUser.id) continue
-      const isDeptLead = lead.role === 'teamLead'
-      const isDirectorOrAdmin = lead.role === 'director' || lead.role === 'super_admin'
-
-      if (isDirectorOrAdmin || isDeptLead) {
-        // For teamLeads, only notify if they match the department
-        // (we don't have dept on leads here, so directors get all, teamLeads get filtered below)
-        await supabase.from('notifications').insert({
-          user_id: lead.id,
-          message: `🔴 Issue raised: "${data.title}" in ${data.entity_name}`,
-          type: 'update',
-          related_id: inserted.id,
-          related_type: 'issue',
-        })
-      }
-    }
-
-    // Also notify team leads specifically in the same department
-    if (dept) {
-      const { data: deptLeads } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('role', 'teamLead')
-        .eq('department', dept)
-        .eq('is_active', true)
-        .neq('id', currentUser.id)
-
-      for (const lead of deptLeads || []) {
-        // Check if notification was already sent (avoid duplicate)
-        const alreadySent = (leads || []).some(l => l.id === lead.id)
-        if (!alreadySent) {
-          await supabase.from('notifications').insert({
-            user_id: lead.id,
-            message: `🔴 Issue raised: "${data.title}" in ${data.entity_name}`,
-            type: 'update',
-            related_id: inserted.id,
-            related_type: 'issue',
-          })
-        }
-      }
-    }
-
+    // Notifications are fanned out by the on_issue_raised DB trigger
+    // (dept members/leads in the same dept + all directors/super_admins globally).
     await fetchIssues()
     return inserted
   }

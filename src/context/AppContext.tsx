@@ -148,6 +148,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       // If the full query fails (e.g. feature columns not yet in DB), retry with base columns only (no joins)
       if (result.error) {
+        console.warn('[AppContext] Enriched task query failed, falling back to base columns. Multi-assignee and profile joins will be unavailable.', result.error)
         result = await supabase
           .from('tasks')
           .select(`

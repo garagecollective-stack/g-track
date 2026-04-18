@@ -71,7 +71,7 @@ export function AdminSettingsPage() {
   }
 
   return (
-    <div className="px-4 py-6 md:px-8 md:py-8 max-w-[900px] mx-auto">
+    <div className="px-4 py-4 md:px-8 md:py-5 xl:py-6 max-w-[900px] mx-auto">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl md:text-3xl font-black text-[var(--ink-900)]" style={{ letterSpacing: '-0.5px' }}>Settings</h1>

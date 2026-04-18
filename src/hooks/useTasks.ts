@@ -173,16 +173,16 @@ export function useTasks(filters?: TaskFilters) {
     if (err) throw err
 
     const tasksToReassign = allTasks.filter(t => ids.includes(t.id))
-    if (assigneeId !== currentUser?.id) {
-      for (const task of tasksToReassign) {
-        await supabase.from('notifications').insert({
+    if (assigneeId !== currentUser?.id && tasksToReassign.length > 0) {
+      await supabase.from('notifications').insert(
+        tasksToReassign.map(task => ({
           user_id: assigneeId,
           message: `You were assigned "${task.title}"`,
           type: 'assignment',
           related_id: task.id,
           related_type: 'task',
-        })
-      }
+        }))
+      )
     }
     // Optimistic local update
     setTasks(prev => prev.map(t => ids.includes(t.id)

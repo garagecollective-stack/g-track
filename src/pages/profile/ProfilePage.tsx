@@ -84,9 +84,9 @@ export function ProfilePage() {
   ]
 
   return (
-    <div className="px-4 py-5 md:px-6 md:py-8 max-w-[1280px] mx-auto">
-      <div className="mb-5">
-        <h1 className="text-2xl font-bold text-[var(--ink-900)] dark:text-[var(--ink-900)]" style={{ letterSpacing: '-0.5px' }}>
+    <div className="px-4 py-4 md:px-6 md:py-5 xl:py-6 max-w-[1280px] mx-auto">
+      <div className="mb-4">
+        <h1 className="text-xl md:text-2xl font-bold text-[var(--ink-900)] dark:text-[var(--ink-900)]" style={{ letterSpacing: '-0.5px' }}>
           My Profile
         </h1>
         <p className="text-sm text-[var(--ink-500)] dark:text-[var(--ink-400)] mt-1">
@@ -95,7 +95,7 @@ export function ProfilePage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-[var(--surface-2)] dark:bg-[var(--surface-1)] rounded-[var(--r-lg)] w-fit mb-6">
+      <div className="flex gap-1 p-1 bg-[var(--surface-2)] dark:bg-[var(--surface-1)] rounded-[var(--r-lg)] w-fit mb-5">
         {tabs.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -113,11 +113,11 @@ export function ProfilePage() {
       </div>
 
       {tab === 'overview' ? (
-        <div className="flex flex-col lg:flex-row gap-5">
+        <div className="flex flex-col lg:flex-row gap-4 xl:gap-5">
           {/* Left column */}
-          <div className="lg:w-72 xl:w-80 2xl:w-96 shrink-0 space-y-4">
+          <div className="lg:w-64 xl:w-72 2xl:w-80 shrink-0 space-y-3 xl:space-y-4">
             {/* Identity card */}
-            <div className="bg-[var(--surface-1)] dark:bg-[var(--surface-1)] border border-[var(--line-1)] dark:border-[var(--line-1)] rounded-[var(--r-lg)] p-5 text-center">
+            <div className="bg-[var(--surface-1)] dark:bg-[var(--surface-1)] border border-[var(--line-1)] dark:border-[var(--line-1)] rounded-[var(--r-lg)] p-4 xl:p-5 text-center">
               <div className="flex justify-center mb-3">
                 <Avatar name={currentUser.name} size="xl" status={currentUser.user_status} imageUrl={currentUser.avatar_url} />
               </div>
@@ -165,9 +165,9 @@ export function ProfilePage() {
             </div>
 
             {/* Completion rate */}
-            <div className="bg-[var(--surface-1)] dark:bg-[var(--surface-1)] border border-[var(--line-1)] dark:border-[var(--line-1)] rounded-[var(--r-lg)] p-5">
+            <div className="bg-[var(--surface-1)] dark:bg-[var(--surface-1)] border border-[var(--line-1)] dark:border-[var(--line-1)] rounded-[var(--r-lg)] p-4 xl:p-5">
               <p className="text-[11px] font-semibold text-[var(--ink-400)] uppercase tracking-wider mb-3">⚡ COMPLETION RATE</p>
-              <p className="text-2xl md:text-3xl lg:text-4xl font-bold text-[var(--ink-900)] dark:text-[var(--ink-900)]" style={{ fontFamily: 'IBM Plex Mono' }}>{completionRate}%</p>
+              <p className="text-2xl md:text-3xl xl:text-4xl font-bold text-[var(--ink-900)] dark:text-[var(--ink-900)]" style={{ fontFamily: 'IBM Plex Mono' }}>{completionRate}%</p>
               <p className="text-sm text-[var(--ink-500)] dark:text-[var(--ink-400)] mt-1">{done} of {total} tasks done</p>
               <ProgressBar value={completionRate} className="mt-3" />
             </div>

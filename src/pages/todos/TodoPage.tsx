@@ -280,7 +280,7 @@ export function TodoPage() {
   ]
 
   return (
-    <div className="px-4 py-5 md:px-6 md:py-8 max-w-2xl mx-auto">
+    <div className="px-4 py-4 md:px-6 md:py-5 xl:py-6 max-w-2xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

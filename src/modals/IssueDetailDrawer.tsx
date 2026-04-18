@@ -38,7 +38,7 @@ interface Props {
   readOnly?: boolean
 }
 
-export function IssueDetailDrawer({ issue: initialIssue, onClose, onUpdate }: Props) {
+export function IssueDetailDrawer({ issue: initialIssue, onClose, onUpdate, readOnly = false }: Props) {
   const { currentUser } = useApp()
   const toast = useToast()
   const { replyToIssue, resolveIssue, markInReview, closeIssue } = useIssues()
@@ -57,6 +57,8 @@ export function IssueDetailDrawer({ issue: initialIssue, onClose, onUpdate }: Pr
   const overlayRef = useRef<HTMLDivElement>(null)
 
   const isMember = currentUser?.role === 'member'
+  const canReply = !readOnly
+  const canResolve = !readOnly && !isMember
 
   useEffect(() => {
     setIssue(initialIssue)
@@ -130,7 +132,7 @@ export function IssueDetailDrawer({ issue: initialIssue, onClose, onUpdate }: Pr
       <div className="fixed top-0 right-0 w-full md:w-[480px] bg-[var(--surface-1)] z-50 flex flex-col shadow-2xl" style={{ height: '100dvh' }}>
         {/* Header */}
         <div className="flex items-start gap-3 px-5 py-4 border-b border-[var(--line-1)] shrink-0">
-          <button onClick={onClose} className="p-2.5 text-[var(--ink-400)] hover:text-[var(--ink-700)] rounded-[var(--r-sm)] hover:bg-[var(--surface-2)] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0">
+          <button onClick={onClose} aria-label="Close issue" className="p-2.5 text-[var(--ink-400)] hover:text-[var(--ink-700)] rounded-[var(--r-sm)] hover:bg-[var(--surface-2)] transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0">
             <X size={18} />
           </button>
           <div className="flex-1 min-w-0">
@@ -206,28 +208,30 @@ export function IssueDetailDrawer({ issue: initialIssue, onClose, onUpdate }: Pr
             )}
           </div>
 
-          {/* Reply input */}
-          <div className="px-5 py-4 border-b border-[var(--line-1)]">
-            <p className="text-[11px] font-bold text-[var(--ink-400)] uppercase tracking-wider mb-2">Reply</p>
-            <textarea
-              value={replyText}
-              onChange={e => setReplyText(e.target.value)}
-              placeholder="Write a reply..."
-              rows={3}
-              className="w-full text-sm border border-[var(--line-1)] rounded-[var(--r-lg)] px-3 py-2.5 focus:outline-none focus:border-[var(--primary)] resize-none"
-            />
-            <button
-              onClick={() => { if (replyText.trim()) setShowReplyConfirm(true) }}
-              disabled={!replyText.trim() || sendingReply}
-              className="mt-2 flex items-center gap-2 px-4 py-2 bg-[var(--primary)] text-white text-sm font-medium rounded-[var(--r-sm)] hover:bg-[var(--primary-700)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Send size={14} />
-              {sendingReply ? 'Sending...' : 'Send Reply'}
-            </button>
-          </div>
+          {/* Reply input — hidden in read-only mode */}
+          {canReply && (
+            <div className="px-5 py-4 border-b border-[var(--line-1)]">
+              <p className="text-[11px] font-bold text-[var(--ink-400)] uppercase tracking-wider mb-2">Reply</p>
+              <textarea
+                value={replyText}
+                onChange={e => setReplyText(e.target.value)}
+                placeholder="Write a reply..."
+                rows={3}
+                className="w-full text-sm border border-[var(--line-1)] rounded-[var(--r-lg)] px-3 py-2.5 focus:outline-none focus:border-[var(--primary)] resize-none"
+              />
+              <button
+                onClick={() => { if (replyText.trim()) setShowReplyConfirm(true) }}
+                disabled={!replyText.trim() || sendingReply}
+                className="mt-2 flex items-center gap-2 px-4 py-2 bg-[var(--primary)] text-white text-sm font-medium rounded-[var(--r-sm)] hover:bg-[var(--primary-700)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Send size={14} />
+                {sendingReply ? 'Sending...' : 'Send Reply'}
+              </button>
+            </div>
+          )}
 
-          {/* Resolution actions — hidden for members */}
-          {!isMember && issue.status !== 'resolved' && issue.status !== 'closed' && (
+          {/* Resolution actions — hidden for members and read-only views */}
+          {canResolve && issue.status !== 'resolved' && issue.status !== 'closed' && (
             <div className="px-5 py-4">
               <p className="text-[11px] font-bold text-[var(--ink-400)] uppercase tracking-wider mb-2">Resolution</p>
               <textarea

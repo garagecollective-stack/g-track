@@ -189,7 +189,7 @@ export function MemberDashboard() {
   }
 
   return (
-    <div className="px-4 py-6 md:px-8 md:py-8 max-w-[1440px] mx-auto">
+    <div className="px-4 py-4 md:px-8 md:py-5 xl:py-6 max-w-[1440px] mx-auto">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-2">

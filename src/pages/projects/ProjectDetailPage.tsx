@@ -143,7 +143,7 @@ export function ProjectDetailPage() {
   }
 
   return (
-    <div className="px-4 py-5 md:px-6 md:py-8 max-w-[1440px] mx-auto animate-reveal-up">
+    <div className="px-4 py-4 md:px-6 md:py-5 xl:py-6 max-w-[1440px] mx-auto animate-reveal-up">
       {/* Breadcrumb */}
       <button onClick={() => navigate(-1)} className="inline-flex items-center gap-1.5 text-[13px] text-[var(--ink-500)] hover:text-[var(--ink-900)] mb-5 transition-colors">
         <ArrowLeft size={14} strokeWidth={1.8} /> Back to Projects

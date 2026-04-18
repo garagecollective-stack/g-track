@@ -72,7 +72,7 @@ export function IssuesPage() {
   ]
 
   return (
-    <div className="px-4 py-5 md:px-6 md:py-8 max-w-[1440px] mx-auto">
+    <div className="px-4 py-4 md:px-6 md:py-5 xl:py-6 max-w-[1440px] mx-auto">
       {/* Header */}
       <div className="mb-5">
         <h1 className="text-2xl font-bold text-[var(--ink-900)]" style={{ letterSpacing: '-0.5px' }}>Issues</h1>

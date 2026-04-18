@@ -69,7 +69,7 @@ export function TasksPage() {
   const selectCls = 'text-[13px] border border-[var(--line-1)] rounded-[var(--r-sm)] px-3 py-2 bg-[var(--surface-1)] text-[var(--ink-700)] focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 cursor-pointer transition-colors'
 
   return (
-    <div className="px-4 py-5 md:px-6 md:py-8 max-w-[1440px] mx-auto animate-reveal-up">
+    <div className="px-4 py-4 md:px-6 md:py-5 xl:py-6 max-w-[1440px] mx-auto animate-reveal-up">
       {/* Header */}
       <div className="flex items-start sm:items-center justify-between gap-4 mb-6">
         <div className="min-w-0">
